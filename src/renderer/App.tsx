@@ -75,18 +75,53 @@ function useHealth() {
   return health
 }
 
-function usePartners(): PartnersState {
+function usePartners(search: string): PartnersState {
   const [state, setState] = useState<PartnersState>({ status: 'loading', data: [] })
 
   useEffect(() => {
-    fetch('http://localhost:5174/partners')
-      .then((response) => response.json())
-      .then((payload) => {
-        const partners: Partner[] = Array.isArray(payload.data) ? payload.data : []
-        setState({ status: 'success', data: partners })
-      })
-      .catch(() => setState({ status: 'error', data: [] }))
-  }, [])
+    let canceled = false
+    const controller = new AbortController()
+
+    setState((previous) => ({ status: 'loading', data: previous.data }))
+
+    const params = new URLSearchParams()
+    const trimmedSearch = search.trim()
+    if (trimmedSearch.length > 0) {
+      params.set('search', trimmedSearch)
+    }
+
+    const url = `http://localhost:5174/partners${params.size > 0 ? `?${params.toString()}` : ''}`
+
+    const timeoutId = setTimeout(() => {
+      fetch(url, { signal: controller.signal })
+        .then((response) => response.json())
+        .then((payload) => {
+          if (canceled) {
+            return
+          }
+
+          const partners: Partner[] = Array.isArray(payload.data) ? payload.data : []
+          setState({ status: 'success', data: partners })
+        })
+        .catch((error) => {
+          if (canceled || controller.signal.aborted) {
+            return
+          }
+
+          if (typeof error === 'object' && error && 'name' in error && (error as { name?: string }).name === 'AbortError') {
+            return
+          }
+
+          setState({ status: 'error', data: [] })
+        })
+    }, 300)
+
+    return () => {
+      canceled = true
+      controller.abort()
+      clearTimeout(timeoutId)
+    }
+  }, [search])
 
   return state
 }
@@ -196,7 +231,8 @@ function parseStatValue(value: unknown) {
 
 export default function App() {
   const health = useHealth()
-  const partnersState = usePartners()
+  const [partnerSearch, setPartnerSearch] = useState('')
+  const partnersState = usePartners(partnerSearch)
   const reportsState = useReports()
   const vouchersState = useVouchers()
   const dashboardStatsState = useDashboardStats()
@@ -261,8 +297,25 @@ export default function App() {
           <Button variant="destructive">Destructive</Button>
         </div>
 
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Parceiros cadastrados</h2>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <h2 className="text-lg font-semibold">Parceiros cadastrados</h2>
+            <div className="w-full sm:w-64">
+              <label htmlFor="partners-search" className="sr-only">
+                Buscar parceiros
+              </label>
+              <input
+                id="partners-search"
+                type="search"
+                value={partnerSearch}
+                onChange={(event) => setPartnerSearch(event.target.value)}
+                placeholder="Buscar parceiros..."
+                autoComplete="off"
+                className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">Filtrar por nome, documento ou email</p>
+            </div>
+          </div>
           {partnersState.status === 'loading' && (
             <p className="text-sm text-muted-foreground">Carregando parceiros...</p>
           )}

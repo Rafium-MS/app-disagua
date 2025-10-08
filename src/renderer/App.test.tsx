@@ -6,6 +6,8 @@ describe('App', () => {
     const markup = renderToString(<App />)
 
     expect(markup).toContain('App DisÁgua')
+    expect(markup).toContain('Buscar parceiros...')
+    expect(markup).toContain('Filtrar por nome, documento ou email')
     expect(markup).toContain('Carregando resumo...')
     expect(markup).toContain('Carregando parceiros...')
     expect(markup).toContain('Carregando relatórios...')
