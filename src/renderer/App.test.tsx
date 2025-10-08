@@ -1,8 +1,11 @@
-import { render, screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+import { renderToString } from 'react-dom/server'
 import App from './App'
 
-it('renderiza título', () => {
-  render(<App />)
-  expect(screen.getByText(/App DisÁgua/i)).toBeInTheDocument()
+describe('App', () => {
+  it('renderiza título', () => {
+    const html = renderToString(<App />)
+    expect(html).toContain('App DisÁgua')
+  })
 })
 
