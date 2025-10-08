@@ -8,6 +8,8 @@ describe('App', () => {
     expect(markup).toContain('App DisÁgua')
     expect(markup).toContain('Buscar parceiros...')
     expect(markup).toContain('Filtrar por nome, documento ou email')
+    expect(markup).toContain('Filtrar relatórios por parceiro')
+    expect(markup).toContain('Todos os parceiros')
     expect(markup).toContain('Filtrar vouchers por status')
     expect(markup).toContain('Todos os vouchers')
     expect(markup).toContain('Carregando resumo...')

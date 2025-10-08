@@ -46,9 +46,14 @@ export function createApp() {
     }
   })
 
-  app.get('/reports', async (_req, res) => {
+  app.get('/reports', async (req, res) => {
     try {
+      const partnerIdParam =
+        typeof req.query.partnerId === 'string' ? Number.parseInt(req.query.partnerId, 10) : Number.NaN
+      const partnerId = Number.isFinite(partnerIdParam) ? partnerIdParam : undefined
+
       const reports = await prisma.report.findMany({
+        where: typeof partnerId === 'number' ? { partnerId } : undefined,
         orderBy: { issuedAt: 'desc' },
         select: {
           id: true,
