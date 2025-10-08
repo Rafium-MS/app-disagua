@@ -50,7 +50,7 @@ Projeto base com:
 ## Rotas do servidor
 
 - `GET /health` → retorna `{ "status": "ok" }`.
-- `GET /partners` → lista parceiros cadastrados ordenados por nome.
+- `GET /partners` → lista parceiros cadastrados ordenados por nome (aceita `?search=` para filtrar por nome, documento ou email).
 - `GET /reports` → lista relatórios com parceiro associado e data de emissão.
 - `GET /vouchers` → lista vouchers emitidos, com parceiro relacionado e status de resgate.
 - `GET /stats` → retorna contagens de parceiros, relatórios e vouchers (resgatados e pendentes).
