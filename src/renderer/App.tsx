@@ -54,6 +54,7 @@ type VouchersState =
   | { status: 'error'; data: Voucher[] }
 
 type VoucherStatusFilter = 'all' | 'redeemed' | 'pending'
+type VoucherPartnerFilter = 'all' | number
 
 type DashboardStats = {
   partnersCount: number
@@ -177,7 +178,7 @@ function useReports(filter: ReportPartnerFilter): ReportsState {
   return state
 }
 
-function useVouchers(status: VoucherStatusFilter): VouchersState {
+function useVouchers(status: VoucherStatusFilter, partner: VoucherPartnerFilter): VouchersState {
   const [state, setState] = useState<VouchersState>({ status: 'loading', data: [] })
 
   useEffect(() => {
@@ -189,6 +190,10 @@ function useVouchers(status: VoucherStatusFilter): VouchersState {
     const params = new URLSearchParams()
     if (status === 'redeemed' || status === 'pending') {
       params.set('status', status)
+    }
+
+    if (partner !== 'all') {
+      params.set('partnerId', String(partner))
     }
 
     const url = `http://localhost:5174/vouchers${params.size > 0 ? `?${params.toString()}` : ''}`
@@ -219,7 +224,7 @@ function useVouchers(status: VoucherStatusFilter): VouchersState {
       canceled = true
       controller.abort()
     }
-  }, [status])
+  }, [status, partner])
 
   return state
 }
@@ -302,7 +307,23 @@ export default function App() {
   const [reportPartnerFilter, setReportPartnerFilter] = useState<ReportPartnerFilter>('all')
   const reportsState = useReports(reportPartnerFilter)
   const [voucherStatusFilter, setVoucherStatusFilter] = useState<VoucherStatusFilter>('all')
-  const vouchersState = useVouchers(voucherStatusFilter)
+  const [voucherPartnerFilter, setVoucherPartnerFilter] = useState<VoucherPartnerFilter>('all')
+  const vouchersState = useVouchers(voucherStatusFilter, voucherPartnerFilter)
+
+  useEffect(() => {
+    if (voucherPartnerFilter === 'all') {
+      return
+    }
+
+    if (partnersState.status !== 'success') {
+      return
+    }
+
+    const partnerExists = partnersState.data.some((partner) => partner.id === voucherPartnerFilter)
+    if (!partnerExists) {
+      setVoucherPartnerFilter('all')
+    }
+  }, [partnersState, voucherPartnerFilter])
   const dashboardStatsState = useDashboardStats()
 
   return (
@@ -493,28 +514,62 @@ export default function App() {
 
       <section className="space-y-4">
         <div className="space-y-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <h2 className="text-lg font-semibold">Vouchers emitidos</h2>
-            <div className="w-full sm:w-64">
-              <label htmlFor="vouchers-status" className="sr-only">
-                Filtrar vouchers por status
-              </label>
-              <select
-                id="vouchers-status"
-                value={voucherStatusFilter}
-                onChange={(event) => {
-                  const nextValue = event.target.value
-                  if (nextValue === 'all' || nextValue === 'redeemed' || nextValue === 'pending') {
-                    setVoucherStatusFilter(nextValue)
-                  }
-                }}
-                className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <option value="all">Todos os vouchers</option>
-                <option value="redeemed">Apenas resgatados</option>
-                <option value="pending">Apenas pendentes</option>
-              </select>
-              <p className="mt-1 text-xs text-muted-foreground">Filtrar vouchers por status</p>
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
+              <div className="w-full sm:w-48">
+                <label htmlFor="vouchers-partner" className="sr-only">
+                  Filtrar vouchers por parceiro
+                </label>
+                <select
+                  id="vouchers-partner"
+                  value={voucherPartnerFilter === 'all' ? 'all' : String(voucherPartnerFilter)}
+                  onChange={(event) => {
+                    const nextValue = event.target.value
+                    if (nextValue === 'all') {
+                      setVoucherPartnerFilter('all')
+                      return
+                    }
+
+                    const parsedPartnerId = Number.parseInt(nextValue, 10)
+                    if (!Number.isNaN(parsedPartnerId)) {
+                      setVoucherPartnerFilter(parsedPartnerId)
+                    }
+                  }}
+                  className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  disabled={partnersState.status === 'loading'}
+                >
+                  <option value="all">Todos os parceiros</option>
+                  {partnersState.status === 'success' &&
+                    partnersState.data.map((partner) => (
+                      <option key={partner.id} value={partner.id}>
+                        {partner.name}
+                      </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">Filtrar vouchers por parceiro</p>
+              </div>
+              <div className="w-full sm:w-48">
+                <label htmlFor="vouchers-status" className="sr-only">
+                  Filtrar vouchers por status
+                </label>
+                <select
+                  id="vouchers-status"
+                  value={voucherStatusFilter}
+                  onChange={(event) => {
+                    const nextValue = event.target.value
+                    if (nextValue === 'all' || nextValue === 'redeemed' || nextValue === 'pending') {
+                      setVoucherStatusFilter(nextValue)
+                    }
+                  }}
+                  className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="all">Todos os vouchers</option>
+                  <option value="redeemed">Apenas resgatados</option>
+                  <option value="pending">Apenas pendentes</option>
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">Filtrar vouchers por status</p>
+              </div>
             </div>
           </div>
           {vouchersState.status === 'loading' && (

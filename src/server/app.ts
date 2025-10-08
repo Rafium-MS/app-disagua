@@ -79,15 +79,21 @@ export function createApp() {
   app.get('/vouchers', async (req, res) => {
     try {
       const statusParam = typeof req.query.status === 'string' ? req.query.status.toLowerCase() : ''
-      const whereClause =
-        statusParam === 'redeemed'
+      const partnerIdParam =
+        typeof req.query.partnerId === 'string' ? Number.parseInt(req.query.partnerId, 10) : Number.NaN
+      const partnerId = Number.isFinite(partnerIdParam) ? partnerIdParam : undefined
+
+      const whereClause = {
+        ...(typeof partnerId === 'number' ? { partnerId } : {}),
+        ...(statusParam === 'redeemed'
           ? { redeemedAt: { not: null } }
           : statusParam === 'pending'
             ? { redeemedAt: null }
-            : undefined
+            : {})
+      }
 
       const vouchers = await prisma.voucher.findMany({
-        where: whereClause,
+        where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
         orderBy: { issuedAt: 'desc' },
         select: {
           id: true,
