@@ -1,20 +1,31 @@
-import type { PrismaClient } from '@prisma/client'
+import { Prisma, type PrismaClient } from '@prisma/client'
+import fs from 'node:fs'
+import path from 'node:path'
 import express from 'express'
 import request from 'supertest'
-import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals'
 
 import { createVouchersRouter } from '../../src/server/routes/vouchers'
 
 const createPrismaMock = () => {
   const voucher = {
     findMany: jest.fn(),
-    count: jest.fn()
+    count: jest.fn(),
+    update: jest.fn()
   }
 
   return {
     voucher,
     $transaction: jest.fn(async (operations: Promise<unknown>[]) => Promise.all(operations))
   }
+}
+
+const uploadsDir = path.resolve(process.cwd(), 'data', 'uploads')
+
+const createApp = (prismaMock: PrismaClient) => {
+  const app = express()
+  app.use('/api/vouchers', createVouchersRouter({ prisma: prismaMock }))
+  return app
 }
 
 describe('GET /api/vouchers', () => {
@@ -68,6 +79,92 @@ describe('GET /api/vouchers', () => {
 
     expect(response.status).toBe(400)
     expect(response.body).toHaveProperty('error', 'Parâmetros inválidos')
+  })
+})
+
+describe('POST /api/vouchers/:id/upload', () => {
+  let prismaMock: ReturnType<typeof createPrismaMock>
+
+  beforeEach(() => {
+    prismaMock = createPrismaMock()
+  })
+
+  afterEach(() => {
+    if (fs.existsSync(uploadsDir)) {
+      fs.rmSync(uploadsDir, { recursive: true, force: true })
+    }
+  })
+
+  it('salva o arquivo e atualiza o caminho do voucher', async () => {
+    prismaMock.voucher.update.mockImplementation(async ({ where, data }) => ({
+      id: where.id,
+      filePath: data.filePath
+    }))
+
+    const app = createApp(prismaMock as unknown as PrismaClient)
+
+    const response = await request(app)
+      .post('/api/vouchers/1/upload')
+      .attach('file', Buffer.from('%PDF-1.4'), {
+        filename: 'comprovante.pdf',
+        contentType: 'application/pdf'
+      })
+
+    expect(response.status).toBe(200)
+    expect(prismaMock.voucher.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 1 },
+        data: { filePath: expect.stringMatching(/^data\/uploads\//) }
+      })
+    )
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        message: 'Upload realizado com sucesso',
+        voucher: {
+          id: 1,
+          filePath: expect.stringMatching(/^data\/uploads\//)
+        }
+      })
+    )
+  })
+
+  it('retorna erro amigável quando o tipo de arquivo é inválido', async () => {
+    const app = createApp(prismaMock as unknown as PrismaClient)
+
+    const response = await request(app)
+      .post('/api/vouchers/1/upload')
+      .attach('file', Buffer.from('texto'), {
+        filename: 'arquivo.txt',
+        contentType: 'text/plain'
+      })
+
+    expect(response.status).toBe(400)
+    expect(response.body).toHaveProperty(
+      'error',
+      'Tipo de arquivo não suportado. Envie apenas PDF, JPG ou PNG.'
+    )
+    expect(prismaMock.voucher.update).not.toHaveBeenCalled()
+  })
+
+  it('retorna 404 quando o voucher não existe', async () => {
+    prismaMock.voucher.update.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('No record found', {
+        code: 'P2025',
+        clientVersion: '5.18.0'
+      })
+    )
+
+    const app = createApp(prismaMock as unknown as PrismaClient)
+
+    const response = await request(app)
+      .post('/api/vouchers/99/upload')
+      .attach('file', Buffer.from('data'), {
+        filename: 'imagem.png',
+        contentType: 'image/png'
+      })
+
+    expect(response.status).toBe(404)
+    expect(response.body).toHaveProperty('error', 'Voucher não encontrado.')
   })
 })
 
