@@ -7,10 +7,40 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
+model Partner {
+  id         Int       @id @default(autoincrement())
+  name       String
+  document   String    @unique
+  email      String?   @unique
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  reports    Report[]
+  vouchers   Voucher[]
 }
 
+model Report {
+  id         Int       @id @default(autoincrement())
+  partnerId  Int
+  title      String
+  issuedAt   DateTime  @default(now())
+  summary    String?
+  partner    Partner   @relation(fields: [partnerId], references: [id])
+  vouchers   Voucher[]
+
+  @@index([partnerId])
+  @@unique([partnerId, title])
+}
+
+model Voucher {
+  id         Int       @id @default(autoincrement())
+  code       String    @unique
+  partnerId  Int
+  reportId   Int?
+  issuedAt   DateTime  @default(now())
+  redeemedAt DateTime?
+  partner    Partner   @relation(fields: [partnerId], references: [id])
+  report     Report?   @relation(fields: [reportId], references: [id])
+
+  @@index([partnerId])
+  @@index([reportId])
+}
