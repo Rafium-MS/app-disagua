@@ -59,6 +59,37 @@ export function createApp() {
     }
   })
 
+  app.get('/vouchers', async (_req, res) => {
+    try {
+      const vouchers = await prisma.voucher.findMany({
+        orderBy: { issuedAt: 'desc' },
+        select: {
+          id: true,
+          code: true,
+          issuedAt: true,
+          redeemedAt: true,
+          partner: {
+            select: {
+              id: true,
+              name: true
+            }
+          },
+          report: {
+            select: {
+              id: true,
+              title: true
+            }
+          }
+        }
+      })
+
+      res.json({ data: vouchers })
+    } catch (error) {
+      console.error('Erro ao listar vouchers', error)
+      res.status(500).json({ error: 'Não foi possível listar os vouchers' })
+    }
+  })
+
   return app
 }
 

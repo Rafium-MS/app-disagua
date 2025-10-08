@@ -52,6 +52,7 @@ Projeto base com:
 - `GET /health` → retorna `{ "status": "ok" }`.
 - `GET /partners` → lista parceiros cadastrados ordenados por nome.
 - `GET /reports` → lista relatórios com parceiro associado e data de emissão.
+- `GET /vouchers` → lista vouchers emitidos, com parceiro relacionado e status de resgate.
 
 Servidor embutido é iniciado pelo processo principal do Electron. No modo `dev`, a UI roda em `http://localhost:5173` e o servidor em `http://localhost:5174`.
 

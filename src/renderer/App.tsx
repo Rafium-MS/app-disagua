@@ -31,6 +31,26 @@ type ReportsState =
   | { status: 'success'; data: Report[] }
   | { status: 'error'; data: Report[] }
 
+type Voucher = {
+  id: number
+  code: string
+  issuedAt: string
+  redeemedAt: string | null
+  partner: {
+    id: number
+    name: string
+  }
+  report: {
+    id: number
+    title: string
+  } | null
+}
+
+type VouchersState =
+  | { status: 'loading'; data: Voucher[] }
+  | { status: 'success'; data: Voucher[] }
+  | { status: 'error'; data: Voucher[] }
+
 function useHealth() {
   const [health, setHealth] = useState<string>('carregando...')
   useEffect(() => {
@@ -74,6 +94,22 @@ function useReports(): ReportsState {
   return state
 }
 
+function useVouchers(): VouchersState {
+  const [state, setState] = useState<VouchersState>({ status: 'loading', data: [] })
+
+  useEffect(() => {
+    fetch('http://localhost:5174/vouchers')
+      .then((response) => response.json())
+      .then((payload) => {
+        const vouchers: Voucher[] = Array.isArray(payload.data) ? payload.data : []
+        setState({ status: 'success', data: vouchers })
+      })
+      .catch(() => setState({ status: 'error', data: [] }))
+  }, [])
+
+  return state
+}
+
 function formatDate(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -93,10 +129,19 @@ function formatDateTime(value: string) {
   })
 }
 
+function getVoucherStatus(redeemedAt: string | null) {
+  if (!redeemedAt) {
+    return { label: 'Pendente', variant: 'warning' as const }
+  }
+
+  return { label: 'Resgatado', variant: 'success' as const }
+}
+
 export default function App() {
   const health = useHealth()
   const partnersState = usePartners()
   const reportsState = useReports()
+  const vouchersState = useVouchers()
 
   return (
     <div className="p-6 space-y-6">
@@ -182,6 +227,63 @@ export default function App() {
                   </p>
                 </article>
               ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Vouchers emitidos</h2>
+          {vouchersState.status === 'loading' && (
+            <p className="text-sm text-muted-foreground">Carregando vouchers...</p>
+          )}
+          {vouchersState.status === 'error' && (
+            <p className="text-sm text-red-600">Não foi possível carregar os vouchers.</p>
+          )}
+          {vouchersState.status === 'success' && vouchersState.data.length === 0 && (
+            <p className="text-sm text-muted-foreground">Nenhum voucher disponível.</p>
+          )}
+          {vouchersState.status === 'success' && vouchersState.data.length > 0 && (
+            <div className="overflow-x-auto rounded-md border">
+              <table className="min-w-full divide-y divide-border text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-medium">Código</th>
+                    <th className="px-4 py-3 text-left font-medium">Parceiro</th>
+                    <th className="px-4 py-3 text-left font-medium">Relatório</th>
+                    <th className="px-4 py-3 text-left font-medium">Emitido em</th>
+                    <th className="px-4 py-3 text-left font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border bg-background">
+                  {vouchersState.data.map((voucher) => {
+                    const status = getVoucherStatus(voucher.redeemedAt)
+
+                    return (
+                      <tr key={voucher.id} className="hover:bg-muted/30">
+                        <td className="px-4 py-3 font-medium text-foreground">{voucher.code}</td>
+                        <td className="px-4 py-3 text-muted-foreground">{voucher.partner.name}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {voucher.report ? voucher.report.title : '—'}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{formatDateTime(voucher.issuedAt)}</td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                              status.variant === 'success'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : 'bg-amber-100 text-amber-800'
+                            }`}
+                          >
+                            {status.label}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
