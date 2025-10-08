@@ -10,10 +10,26 @@ type Partner = {
   updatedAt: string
 }
 
+type Report = {
+  id: number
+  title: string
+  summary: string | null
+  issuedAt: string
+  partner: {
+    id: number
+    name: string
+  }
+}
+
 type PartnersState =
   | { status: 'loading'; data: Partner[] }
   | { status: 'success'; data: Partner[] }
   | { status: 'error'; data: Partner[] }
+
+type ReportsState =
+  | { status: 'loading'; data: Report[] }
+  | { status: 'success'; data: Report[] }
+  | { status: 'error'; data: Report[] }
 
 function useHealth() {
   const [health, setHealth] = useState<string>('carregando...')
@@ -42,6 +58,22 @@ function usePartners(): PartnersState {
   return state
 }
 
+function useReports(): ReportsState {
+  const [state, setState] = useState<ReportsState>({ status: 'loading', data: [] })
+
+  useEffect(() => {
+    fetch('http://localhost:5174/reports')
+      .then((response) => response.json())
+      .then((payload) => {
+        const reports: Report[] = Array.isArray(payload.data) ? payload.data : []
+        setState({ status: 'success', data: reports })
+      })
+      .catch(() => setState({ status: 'error', data: [] }))
+  }, [])
+
+  return state
+}
+
 function formatDate(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -50,9 +82,21 @@ function formatDate(value: string) {
   return date.toLocaleDateString('pt-BR')
 }
 
+function formatDateTime(value: string) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return '—'
+  }
+  return date.toLocaleString('pt-BR', {
+    dateStyle: 'short',
+    timeStyle: 'short'
+  })
+}
+
 export default function App() {
   const health = useHealth()
   const partnersState = usePartners()
+  const reportsState = useReports()
 
   return (
     <div className="p-6 space-y-6">
@@ -103,6 +147,41 @@ export default function App() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Relatórios recentes</h2>
+          {reportsState.status === 'loading' && (
+            <p className="text-sm text-muted-foreground">Carregando relatórios...</p>
+          )}
+          {reportsState.status === 'error' && (
+            <p className="text-sm text-red-600">Não foi possível carregar os relatórios.</p>
+          )}
+          {reportsState.status === 'success' && reportsState.data.length === 0 && (
+            <p className="text-sm text-muted-foreground">Nenhum relatório disponível.</p>
+          )}
+          {reportsState.status === 'success' && reportsState.data.length > 0 && (
+            <div className="grid gap-3 md:grid-cols-2">
+              {reportsState.data.map((report) => (
+                <article key={report.id} className="rounded-lg border bg-background p-4 shadow-sm">
+                  <header className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {report.partner.name}
+                    </p>
+                    <h3 className="text-base font-semibold text-foreground">{report.title}</h3>
+                  </header>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {report.summary ?? 'Sem resumo disponível.'}
+                  </p>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Emitido em {formatDateTime(report.issuedAt)}
+                  </p>
+                </article>
+              ))}
             </div>
           )}
         </div>
