@@ -71,9 +71,18 @@ export function createApp() {
     }
   })
 
-  app.get('/vouchers', async (_req, res) => {
+  app.get('/vouchers', async (req, res) => {
     try {
+      const statusParam = typeof req.query.status === 'string' ? req.query.status.toLowerCase() : ''
+      const whereClause =
+        statusParam === 'redeemed'
+          ? { redeemedAt: { not: null } }
+          : statusParam === 'pending'
+            ? { redeemedAt: null }
+            : undefined
+
       const vouchers = await prisma.voucher.findMany({
+        where: whereClause,
         orderBy: { issuedAt: 'desc' },
         select: {
           id: true,

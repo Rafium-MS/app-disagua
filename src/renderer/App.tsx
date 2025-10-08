@@ -51,6 +51,8 @@ type VouchersState =
   | { status: 'success'; data: Voucher[] }
   | { status: 'error'; data: Voucher[] }
 
+type VoucherStatusFilter = 'all' | 'redeemed' | 'pending'
+
 type DashboardStats = {
   partnersCount: number
   reportsCount: number
@@ -142,18 +144,49 @@ function useReports(): ReportsState {
   return state
 }
 
-function useVouchers(): VouchersState {
+function useVouchers(status: VoucherStatusFilter): VouchersState {
   const [state, setState] = useState<VouchersState>({ status: 'loading', data: [] })
 
   useEffect(() => {
-    fetch('http://localhost:5174/vouchers')
+    let canceled = false
+    const controller = new AbortController()
+
+    setState((previous) => ({ status: 'loading', data: previous.data }))
+
+    const params = new URLSearchParams()
+    if (status === 'redeemed' || status === 'pending') {
+      params.set('status', status)
+    }
+
+    const url = `http://localhost:5174/vouchers${params.size > 0 ? `?${params.toString()}` : ''}`
+
+    fetch(url, { signal: controller.signal })
       .then((response) => response.json())
       .then((payload) => {
+        if (canceled) {
+          return
+        }
+
         const vouchers: Voucher[] = Array.isArray(payload.data) ? payload.data : []
         setState({ status: 'success', data: vouchers })
       })
-      .catch(() => setState({ status: 'error', data: [] }))
-  }, [])
+      .catch((error) => {
+        if (canceled || controller.signal.aborted) {
+          return
+        }
+
+        if (typeof error === 'object' && error && 'name' in error && (error as { name?: string }).name === 'AbortError') {
+          return
+        }
+
+        setState({ status: 'error', data: [] })
+      })
+
+    return () => {
+      canceled = true
+      controller.abort()
+    }
+  }, [status])
 
   return state
 }
@@ -234,7 +267,8 @@ export default function App() {
   const [partnerSearch, setPartnerSearch] = useState('')
   const partnersState = usePartners(partnerSearch)
   const reportsState = useReports()
-  const vouchersState = useVouchers()
+  const [voucherStatusFilter, setVoucherStatusFilter] = useState<VoucherStatusFilter>('all')
+  const vouchersState = useVouchers(voucherStatusFilter)
   const dashboardStatsState = useDashboardStats()
 
   return (
@@ -390,8 +424,31 @@ export default function App() {
       </section>
 
       <section className="space-y-4">
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Vouchers emitidos</h2>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <h2 className="text-lg font-semibold">Vouchers emitidos</h2>
+            <div className="w-full sm:w-64">
+              <label htmlFor="vouchers-status" className="sr-only">
+                Filtrar vouchers por status
+              </label>
+              <select
+                id="vouchers-status"
+                value={voucherStatusFilter}
+                onChange={(event) => {
+                  const nextValue = event.target.value
+                  if (nextValue === 'all' || nextValue === 'redeemed' || nextValue === 'pending') {
+                    setVoucherStatusFilter(nextValue)
+                  }
+                }}
+                className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              >
+                <option value="all">Todos os vouchers</option>
+                <option value="redeemed">Apenas resgatados</option>
+                <option value="pending">Apenas pendentes</option>
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">Filtrar vouchers por status</p>
+            </div>
+          </div>
           {vouchersState.status === 'loading' && (
             <p className="text-sm text-muted-foreground">Carregando vouchers...</p>
           )}
