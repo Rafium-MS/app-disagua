@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { useReports } from './hooks/useReports'
 
 type Partner = {
   id: number
@@ -10,26 +11,10 @@ type Partner = {
   updatedAt: string
 }
 
-type Report = {
-  id: number
-  title: string
-  summary: string | null
-  issuedAt: string
-  partner: {
-    id: number
-    name: string
-  }
-}
-
 type PartnersState =
   | { status: 'loading'; data: Partner[] }
   | { status: 'success'; data: Partner[] }
   | { status: 'error'; data: Partner[] }
-
-type ReportsState =
-  | { status: 'loading'; data: Report[] }
-  | { status: 'success'; data: Report[] }
-  | { status: 'error'; data: Report[] }
 
 type ReportPartnerFilter = 'all' | number
 
@@ -127,53 +112,6 @@ function usePartners(search: string): PartnersState {
       clearTimeout(timeoutId)
     }
   }, [search])
-
-  return state
-}
-
-function useReports(filter: ReportPartnerFilter): ReportsState {
-  const [state, setState] = useState<ReportsState>({ status: 'loading', data: [] })
-
-  useEffect(() => {
-    let canceled = false
-    const controller = new AbortController()
-
-    setState((previous) => ({ status: 'loading', data: previous.data }))
-
-    const params = new URLSearchParams()
-    if (filter !== 'all') {
-      params.set('partnerId', String(filter))
-    }
-
-    const url = `http://localhost:5174/reports${params.size > 0 ? `?${params.toString()}` : ''}`
-
-    fetch(url, { signal: controller.signal })
-      .then((response) => response.json())
-      .then((payload) => {
-        if (canceled) {
-          return
-        }
-
-        const reports: Report[] = Array.isArray(payload.data) ? payload.data : []
-        setState({ status: 'success', data: reports })
-      })
-      .catch((error) => {
-        if (canceled || controller.signal.aborted) {
-          return
-        }
-
-        if (typeof error === 'object' && error && 'name' in error && (error as { name?: string }).name === 'AbortError') {
-          return
-        }
-
-        setState({ status: 'error', data: [] })
-      })
-
-    return () => {
-      canceled = true
-      controller.abort()
-    }
-  }, [filter])
 
   return state
 }
@@ -305,7 +243,7 @@ export default function App() {
   const [partnerSearch, setPartnerSearch] = useState('')
   const partnersState = usePartners(partnerSearch)
   const [reportPartnerFilter, setReportPartnerFilter] = useState<ReportPartnerFilter>('all')
-  const reportsState = useReports(reportPartnerFilter)
+  const reportsState = useReports({ partnerId: reportPartnerFilter })
   const [voucherStatusFilter, setVoucherStatusFilter] = useState<VoucherStatusFilter>('all')
   const [voucherPartnerFilter, setVoucherPartnerFilter] = useState<VoucherPartnerFilter>('all')
   const vouchersState = useVouchers(voucherStatusFilter, voucherPartnerFilter)
