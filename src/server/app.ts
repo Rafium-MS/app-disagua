@@ -13,21 +13,9 @@ export function createApp() {
     res.json({ status: 'ok' })
   })
 
-  app.get('/partners', async (req, res) => {
+  app.get('/partners', async (_req, res) => {
     try {
-      const search = typeof req.query.search === 'string' ? req.query.search.trim() : ''
-
       const partners = await prisma.partner.findMany({
-        where:
-          search.length > 0
-            ? {
-                OR: [
-                  { name: { contains: search, mode: 'insensitive' } },
-                  { document: { contains: search } },
-                  { email: { contains: search, mode: 'insensitive' } }
-                ]
-              }
-            : undefined,
         orderBy: { name: 'asc' },
         select: {
           id: true,
@@ -39,17 +27,10 @@ export function createApp() {
         }
       })
 
-      res.json(
-        partners.map((partner) => ({
-          ...partner,
-          email: partner.email ?? null,
-          createdAt: partner.createdAt.toISOString(),
-          updatedAt: partner.updatedAt.toISOString()
-        }))
-      )
+      res.json({ data: partners })
     } catch (error) {
       console.error('Erro ao listar parceiros', error)
-      res.status(500).json({ error: 'internal_error' })
+      res.status(500).json({ error: 'Não foi possível listar os parceiros' })
     }
   })
 
