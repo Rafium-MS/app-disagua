@@ -51,6 +51,19 @@ type VouchersState =
   | { status: 'success'; data: Voucher[] }
   | { status: 'error'; data: Voucher[] }
 
+type DashboardStats = {
+  partnersCount: number
+  reportsCount: number
+  vouchersCount: number
+  redeemedVouchersCount: number
+  pendingVouchersCount: number
+}
+
+type DashboardStatsState =
+  | { status: 'loading'; data: null }
+  | { status: 'success'; data: DashboardStats }
+  | { status: 'error'; data: null }
+
 function useHealth() {
   const [health, setHealth] = useState<string>('carregando...')
   useEffect(() => {
@@ -110,6 +123,35 @@ function useVouchers(): VouchersState {
   return state
 }
 
+function useDashboardStats(): DashboardStatsState {
+  const [state, setState] = useState<DashboardStatsState>({ status: 'loading', data: null })
+
+  useEffect(() => {
+    fetch('http://localhost:5174/stats')
+      .then((response) => response.json())
+      .then((payload) => {
+        if (payload && typeof payload === 'object' && payload.data && typeof payload.data === 'object') {
+          const raw = payload.data as Record<string, unknown>
+          const stats: DashboardStats = {
+            partnersCount: parseStatValue(raw.partnersCount),
+            reportsCount: parseStatValue(raw.reportsCount),
+            vouchersCount: parseStatValue(raw.vouchersCount),
+            redeemedVouchersCount: parseStatValue(raw.redeemedVouchersCount),
+            pendingVouchersCount: parseStatValue(raw.pendingVouchersCount)
+          }
+
+          setState({ status: 'success', data: stats })
+          return
+        }
+
+        setState({ status: 'error', data: null })
+      })
+      .catch(() => setState({ status: 'error', data: null }))
+  }, [])
+
+  return state
+}
+
 function formatDate(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -137,11 +179,27 @@ function getVoucherStatus(redeemedAt: string | null) {
   return { label: 'Resgatado', variant: 'success' as const }
 }
 
+const numberFormatter = new Intl.NumberFormat('pt-BR')
+
+function formatNumber(value: number) {
+  return numberFormatter.format(value)
+}
+
+function parseStatValue(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value
+  }
+
+  const numeric = Number(value ?? 0)
+  return Number.isFinite(numeric) ? numeric : 0
+}
+
 export default function App() {
   const health = useHealth()
   const partnersState = usePartners()
   const reportsState = useReports()
   const vouchersState = useVouchers()
+  const dashboardStatsState = useDashboardStats()
 
   return (
     <div className="p-6 space-y-6">
@@ -149,6 +207,52 @@ export default function App() {
         <h1 className="text-2xl font-bold tracking-tight">App DisÁgua</h1>
         <p className="text-sm text-muted-foreground">Servidor: {health}</p>
       </header>
+
+      <section className="space-y-4">
+        <div className="space-y-2">
+          <h2 className="text-lg font-semibold">Resumo geral</h2>
+          {dashboardStatsState.status === 'loading' && (
+            <p className="text-sm text-muted-foreground">Carregando resumo...</p>
+          )}
+          {dashboardStatsState.status === 'error' && (
+            <p className="text-sm text-red-600">Não foi possível carregar o resumo.</p>
+          )}
+          {dashboardStatsState.status === 'success' && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <article className="rounded-lg border bg-background p-4 shadow-sm">
+                <h3 className="text-sm font-medium text-muted-foreground">Parceiros cadastrados</h3>
+                <p className="mt-2 text-2xl font-semibold text-foreground">
+                  {formatNumber(dashboardStatsState.data.partnersCount)}
+                </p>
+              </article>
+              <article className="rounded-lg border bg-background p-4 shadow-sm">
+                <h3 className="text-sm font-medium text-muted-foreground">Relatórios emitidos</h3>
+                <p className="mt-2 text-2xl font-semibold text-foreground">
+                  {formatNumber(dashboardStatsState.data.reportsCount)}
+                </p>
+              </article>
+              <article className="rounded-lg border bg-background p-4 shadow-sm">
+                <h3 className="text-sm font-medium text-muted-foreground">Vouchers emitidos</h3>
+                <p className="mt-2 text-2xl font-semibold text-foreground">
+                  {formatNumber(dashboardStatsState.data.vouchersCount)}
+                </p>
+              </article>
+              <article className="rounded-lg border bg-background p-4 shadow-sm">
+                <h3 className="text-sm font-medium text-muted-foreground">Vouchers resgatados</h3>
+                <p className="mt-2 text-2xl font-semibold text-foreground">
+                  {formatNumber(dashboardStatsState.data.redeemedVouchersCount)}
+                </p>
+              </article>
+              <article className="rounded-lg border bg-background p-4 shadow-sm">
+                <h3 className="text-sm font-medium text-muted-foreground">Vouchers pendentes</h3>
+                <p className="mt-2 text-2xl font-semibold text-foreground">
+                  {formatNumber(dashboardStatsState.data.pendingVouchersCount)}
+                </p>
+              </article>
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="space-y-4">
         <div className="space-x-2">
