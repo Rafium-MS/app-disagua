@@ -62,7 +62,56 @@ async function main() {
     })
   }
 
-  console.log('Seed concluído com parceiros e relatórios de exemplo')
+  const vouchersData = [
+    {
+      code: 'VCHR-2024-0001',
+      partnerDocument: '12345678901',
+      reportTitle: 'Relatório de Qualidade - Janeiro/2024',
+      redeemed: false
+    },
+    {
+      code: 'VCHR-2024-0002',
+      partnerDocument: '98765432100',
+      reportTitle: 'Relatório Operacional - Fevereiro/2024',
+      redeemed: true
+    },
+    {
+      code: 'VCHR-2024-0003',
+      partnerDocument: '45678912300',
+      reportTitle: null,
+      redeemed: false
+    }
+  ] as const
+
+  for (const voucher of vouchersData) {
+    const partnerId = partnerMap.get(voucher.partnerDocument)
+    if (!partnerId) {
+      continue
+    }
+
+    const relatedReport = voucher.reportTitle
+      ? await prisma.report.findFirst({
+          where: { title: voucher.reportTitle }
+        })
+      : null
+
+    await prisma.voucher.upsert({
+      where: { code: voucher.code },
+      update: {
+        partnerId,
+        reportId: relatedReport?.id ?? null,
+        redeemedAt: voucher.redeemed ? new Date() : null
+      },
+      create: {
+        code: voucher.code,
+        partnerId,
+        reportId: relatedReport?.id ?? null,
+        redeemedAt: voucher.redeemed ? new Date() : null
+      }
+    })
+  }
+
+  console.log('Seed concluído com parceiros, relatórios e vouchers de exemplo')
 }
 
 main()
