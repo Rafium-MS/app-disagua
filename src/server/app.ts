@@ -34,6 +34,31 @@ export function createApp() {
     }
   })
 
+  app.get('/reports', async (_req, res) => {
+    try {
+      const reports = await prisma.report.findMany({
+        orderBy: { issuedAt: 'desc' },
+        select: {
+          id: true,
+          title: true,
+          summary: true,
+          issuedAt: true,
+          partner: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      })
+
+      res.json({ data: reports })
+    } catch (error) {
+      console.error('Erro ao listar relatórios', error)
+      res.status(500).json({ error: 'Não foi possível listar os relatórios' })
+    }
+  })
+
   return app
 }
 
