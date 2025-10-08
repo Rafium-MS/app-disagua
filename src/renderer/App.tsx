@@ -31,6 +31,8 @@ type ReportsState =
   | { status: 'success'; data: Report[] }
   | { status: 'error'; data: Report[] }
 
+type ReportPartnerFilter = 'all' | number
+
 type Voucher = {
   id: number
   code: string
@@ -128,18 +130,49 @@ function usePartners(search: string): PartnersState {
   return state
 }
 
-function useReports(): ReportsState {
+function useReports(filter: ReportPartnerFilter): ReportsState {
   const [state, setState] = useState<ReportsState>({ status: 'loading', data: [] })
 
   useEffect(() => {
-    fetch('http://localhost:5174/reports')
+    let canceled = false
+    const controller = new AbortController()
+
+    setState((previous) => ({ status: 'loading', data: previous.data }))
+
+    const params = new URLSearchParams()
+    if (filter !== 'all') {
+      params.set('partnerId', String(filter))
+    }
+
+    const url = `http://localhost:5174/reports${params.size > 0 ? `?${params.toString()}` : ''}`
+
+    fetch(url, { signal: controller.signal })
       .then((response) => response.json())
       .then((payload) => {
+        if (canceled) {
+          return
+        }
+
         const reports: Report[] = Array.isArray(payload.data) ? payload.data : []
         setState({ status: 'success', data: reports })
       })
-      .catch(() => setState({ status: 'error', data: [] }))
-  }, [])
+      .catch((error) => {
+        if (canceled || controller.signal.aborted) {
+          return
+        }
+
+        if (typeof error === 'object' && error && 'name' in error && (error as { name?: string }).name === 'AbortError') {
+          return
+        }
+
+        setState({ status: 'error', data: [] })
+      })
+
+    return () => {
+      canceled = true
+      controller.abort()
+    }
+  }, [filter])
 
   return state
 }
@@ -266,7 +299,8 @@ export default function App() {
   const health = useHealth()
   const [partnerSearch, setPartnerSearch] = useState('')
   const partnersState = usePartners(partnerSearch)
-  const reportsState = useReports()
+  const [reportPartnerFilter, setReportPartnerFilter] = useState<ReportPartnerFilter>('all')
+  const reportsState = useReports(reportPartnerFilter)
   const [voucherStatusFilter, setVoucherStatusFilter] = useState<VoucherStatusFilter>('all')
   const vouchersState = useVouchers(voucherStatusFilter)
   const dashboardStatsState = useDashboardStats()
@@ -389,8 +423,42 @@ export default function App() {
       </section>
 
       <section className="space-y-4">
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Relatórios recentes</h2>
+        <div className="space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <h2 className="text-lg font-semibold">Relatórios recentes</h2>
+            <div className="w-full sm:w-64">
+              <label htmlFor="reports-partner" className="sr-only">
+                Filtrar relatórios por parceiro
+              </label>
+              <select
+                id="reports-partner"
+                value={reportPartnerFilter === 'all' ? 'all' : String(reportPartnerFilter)}
+                onChange={(event) => {
+                  const nextValue = event.target.value
+                  if (nextValue === 'all') {
+                    setReportPartnerFilter('all')
+                    return
+                  }
+
+                  const parsedPartnerId = Number.parseInt(nextValue, 10)
+                  if (!Number.isNaN(parsedPartnerId)) {
+                    setReportPartnerFilter(parsedPartnerId)
+                  }
+                }}
+                className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                disabled={partnersState.status === 'loading'}
+              >
+                <option value="all">Todos os parceiros</option>
+                {partnersState.status === 'success' &&
+                  partnersState.data.map((partner) => (
+                    <option key={partner.id} value={partner.id}>
+                      {partner.name}
+                    </option>
+                  ))}
+              </select>
+              <p className="mt-1 text-xs text-muted-foreground">Filtrar relatórios por parceiro</p>
+            </div>
+          </div>
           {reportsState.status === 'loading' && (
             <p className="text-sm text-muted-foreground">Carregando relatórios...</p>
           )}
