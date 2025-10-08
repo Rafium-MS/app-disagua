@@ -2,6 +2,9 @@ import express from 'express'
 import cors from 'cors'
 
 import { prisma } from './prisma'
+import { partnersRouter } from './routes/partners'
+import { reportsRouter } from './routes/reports'
+import { vouchersRouter } from './routes/vouchers'
 
 export function createApp() {
   const app = express()
@@ -13,114 +16,9 @@ export function createApp() {
     res.json({ status: 'ok' })
   })
 
-  app.get('/partners', async (req, res) => {
-    try {
-      const search = typeof req.query.search === 'string' ? req.query.search.trim() : ''
-
-      const partners = await prisma.partner.findMany({
-        where:
-          search.length > 0
-            ? {
-                OR: [
-                  { name: { contains: search, mode: 'insensitive' } },
-                  { document: { contains: search } },
-                  { email: { contains: search, mode: 'insensitive' } }
-                ]
-              }
-            : undefined,
-        orderBy: { name: 'asc' },
-        select: {
-          id: true,
-          name: true,
-          document: true,
-          email: true,
-          createdAt: true,
-          updatedAt: true
-        }
-      })
-
-      res.json({ data: partners })
-    } catch (error) {
-      console.error('Erro ao listar parceiros', error)
-      res.status(500).json({ error: 'Não foi possível listar os parceiros' })
-    }
-  })
-
-  app.get('/reports', async (req, res) => {
-    try {
-      const partnerIdParam =
-        typeof req.query.partnerId === 'string' ? Number.parseInt(req.query.partnerId, 10) : Number.NaN
-      const partnerId = Number.isFinite(partnerIdParam) ? partnerIdParam : undefined
-
-      const reports = await prisma.report.findMany({
-        where: typeof partnerId === 'number' ? { partnerId } : undefined,
-        orderBy: { issuedAt: 'desc' },
-        select: {
-          id: true,
-          title: true,
-          summary: true,
-          issuedAt: true,
-          partner: {
-            select: {
-              id: true,
-              name: true
-            }
-          }
-        }
-      })
-
-      res.json({ data: reports })
-    } catch (error) {
-      console.error('Erro ao listar relatórios', error)
-      res.status(500).json({ error: 'Não foi possível listar os relatórios' })
-    }
-  })
-
-  app.get('/vouchers', async (req, res) => {
-    try {
-      const statusParam = typeof req.query.status === 'string' ? req.query.status.toLowerCase() : ''
-      const partnerIdParam =
-        typeof req.query.partnerId === 'string' ? Number.parseInt(req.query.partnerId, 10) : Number.NaN
-      const partnerId = Number.isFinite(partnerIdParam) ? partnerIdParam : undefined
-
-      const whereClause = {
-        ...(typeof partnerId === 'number' ? { partnerId } : {}),
-        ...(statusParam === 'redeemed'
-          ? { redeemedAt: { not: null } }
-          : statusParam === 'pending'
-            ? { redeemedAt: null }
-            : {})
-      }
-
-      const vouchers = await prisma.voucher.findMany({
-        where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
-        orderBy: { issuedAt: 'desc' },
-        select: {
-          id: true,
-          code: true,
-          issuedAt: true,
-          redeemedAt: true,
-          partner: {
-            select: {
-              id: true,
-              name: true
-            }
-          },
-          report: {
-            select: {
-              id: true,
-              title: true
-            }
-          }
-        }
-      })
-
-      res.json({ data: vouchers })
-    } catch (error) {
-      console.error('Erro ao listar vouchers', error)
-      res.status(500).json({ error: 'Não foi possível listar os vouchers' })
-    }
-  })
+  app.use('/api/partners', partnersRouter)
+  app.use('/api/reports', reportsRouter)
+  app.use('/api/vouchers', vouchersRouter)
 
   app.get('/stats', async (_req, res) => {
     try {
