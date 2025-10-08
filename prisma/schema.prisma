@@ -38,6 +38,7 @@ model Voucher {
   reportId   Int?
   issuedAt   DateTime  @default(now())
   redeemedAt DateTime?
+  filePath   String?
   partner    Partner   @relation(fields: [partnerId], references: [id])
   report     Report?   @relation(fields: [reportId], references: [id])
 
