@@ -9,7 +9,8 @@ import { createApp } from '../src/server/app'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-const isDev = process.env.VITE_DEV_SERVER_URL || process.env.ELECTRON_START_URL
+// Use Electron's packaging flag to detect dev vs prod
+const isDev = !app.isPackaged
 
 async function createWindow() {
   const win = new BrowserWindow({
@@ -24,7 +25,7 @@ async function createWindow() {
   })
 
   if (isDev) {
-    const url = process.env.VITE_DEV_SERVER_URL || 'http://localhost:5173'
+    const url = process.env.VITE_DEV_SERVER_URL || process.env.ELECTRON_START_URL || 'http://localhost:5173'
     await win.loadURL(url)
     win.webContents.openDevTools({ mode: 'detach' })
   } else {
@@ -67,4 +68,3 @@ app.on('before-quit', () => {
     })
   }
 })
-

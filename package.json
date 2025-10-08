@@ -5,7 +5,7 @@
   "type": "module",
   "main": "electron/main.ts",
   "scripts": {
-    "dev": "concurrently -k -n VITE,ELECTRON \"vite\" \"wait-on tcp:5173 && electron -r ts-node/register/transpile-only -r tsconfig-paths/register electron/main.ts\"",
+    "dev": "concurrently -k -n VITE,ELECTRON \"vite\" \"wait-on tcp:5173 && electron --loader tsx electron/main.ts\"",
     "server": "ts-node --transpile-only src/server/index.ts",
     "migrate": "prisma migrate dev",
     "seed": "prisma db seed",
