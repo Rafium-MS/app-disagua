@@ -5,6 +5,7 @@ const { pathToFileURL } = require('node:url')
 
 async function start() {
   try {
+    await import('tsx/esm')
     const target = pathToFileURL(join(__dirname, 'main.ts')).href
     await import(target)
   } catch (error) {
