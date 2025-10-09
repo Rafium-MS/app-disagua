@@ -10,7 +10,6 @@
     "migrate": "prisma migrate dev",
     "seed": "prisma db seed",
     "test": "vitest",
-    "test:jest": "jest",
     "build:renderer": "vite build",
     "generate": "prisma generate"
   },
@@ -31,7 +30,6 @@
     "tailwind-merge": "^2.5.2"
   },
   "devDependencies": {
-    "@testing-library/jest-dom": "^6.4.8",
     "@testing-library/react": "^16.0.0",
     "@types/express": "^4.17.21",
     "@types/cors": "^2.8.17",
@@ -42,7 +40,6 @@
     "autoprefixer": "^10.4.19",
     "concurrently": "^9.0.1",
     "electron": "^31.3.1",
-    "jest": "^29.7.0",
     "postcss": "^8.4.41",
     "prisma": "^5.18.0",
     "supertest": "^7.0.0",
@@ -50,7 +47,6 @@
     "tailwindcss": "^3.4.10",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "^4.2.0",
-    "ts-jest": "^29.2.4",
     "tsx": "^4.19.1",
     "typescript": "^5.6.2",
     "vite": "^5.4.6",
