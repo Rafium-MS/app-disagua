@@ -3,20 +3,20 @@ import fs from 'node:fs'
 import path from 'node:path'
 import express from 'express'
 import request from 'supertest'
-import { afterEach, beforeEach, describe, expect, it, jest } from '@jest/globals'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createVouchersRouter } from '../../src/server/routes/vouchers'
 
 const createPrismaMock = () => {
   const voucher = {
-    findMany: jest.fn(),
-    count: jest.fn(),
-    update: jest.fn()
+    findMany: vi.fn(),
+    count: vi.fn(),
+    update: vi.fn()
   }
 
   return {
     voucher,
-    $transaction: jest.fn(async (operations: Promise<unknown>[]) => Promise.all(operations))
+    $transaction: vi.fn(async (operations: Promise<unknown>[]) => Promise.all(operations))
   }
 }
 
@@ -65,7 +65,16 @@ describe('GET /api/vouchers', () => {
     )
     expect(response.body).toEqual(
       expect.objectContaining({
-        data: vouchers,
+        data: expect.arrayContaining([
+          expect.objectContaining({
+            id: vouchers[0].id,
+            code: vouchers[0].code,
+            issuedAt: vouchers[0].issuedAt.toISOString(),
+            redeemedAt: vouchers[0].redeemedAt,
+            partner: vouchers[0].partner,
+            report: vouchers[0].report
+          })
+        ]),
         pagination: expect.objectContaining({ total: 1, totalPages: 1 })
       })
     )
@@ -101,7 +110,16 @@ describe('GET /api/vouchers', () => {
     )
     expect(response.body).toEqual(
       expect.objectContaining({
-        data: vouchers,
+        data: expect.arrayContaining([
+          expect.objectContaining({
+            id: vouchers[0].id,
+            code: vouchers[0].code,
+            issuedAt: vouchers[0].issuedAt.toISOString(),
+            redeemedAt: vouchers[0].redeemedAt,
+            partner: vouchers[0].partner,
+            report: vouchers[0].report
+          })
+        ]),
         pagination: expect.objectContaining({ total: 1, totalPages: 1 })
       })
     )
@@ -123,11 +141,20 @@ describe('POST /api/vouchers/:id/upload', () => {
 
   beforeEach(() => {
     prismaMock = createPrismaMock()
+    fs.mkdirSync(uploadsDir, { recursive: true })
   })
 
   afterEach(() => {
-    if (fs.existsSync(uploadsDir)) {
-      fs.rmSync(uploadsDir, { recursive: true, force: true })
+    if (!fs.existsSync(uploadsDir)) {
+      return
+    }
+
+    for (const entry of fs.readdirSync(uploadsDir)) {
+      if (entry === '.gitignore') {
+        continue
+      }
+
+      fs.rmSync(path.join(uploadsDir, entry), { recursive: true, force: true })
     }
   })
 

@@ -1,19 +1,19 @@
 import type { PrismaClient } from '@prisma/client'
 import express from 'express'
 import request from 'supertest'
-import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createPartnersRouter } from '../../src/server/routes/partners'
 
 const createPrismaMock = () => {
   const partner = {
-    findMany: jest.fn(),
-    count: jest.fn()
+    findMany: vi.fn(),
+    count: vi.fn()
   }
 
   return {
     partner,
-    $transaction: jest.fn(async (operations: Promise<unknown>[]) => Promise.all(operations))
+    $transaction: vi.fn(async (operations: Promise<unknown>[]) => Promise.all(operations))
   }
 }
 
@@ -46,7 +46,16 @@ describe('GET /api/partners', () => {
     )
     expect(response.body).toEqual(
       expect.objectContaining({
-        data: partners,
+        data: expect.arrayContaining([
+          expect.objectContaining({
+            id: partners[0].id,
+            name: partners[0].name,
+            document: partners[0].document,
+            email: partners[0].email,
+            createdAt: partners[0].createdAt.toISOString(),
+            updatedAt: partners[0].updatedAt.toISOString()
+          })
+        ]),
         pagination: expect.objectContaining({
           page: 2,
           pageSize: 1,

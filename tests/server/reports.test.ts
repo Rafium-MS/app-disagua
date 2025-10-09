@@ -1,21 +1,17 @@
 import type { PrismaClient } from '@prisma/client'
 import express from 'express'
 import request from 'supertest'
-import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createReportsRouter } from '../../src/server/routes/reports'
 
-type PrismaMock = {
-  report: { findUnique: jest.Mock }
-  partner: { findMany: jest.Mock; count: jest.Mock }
-  $transaction: jest.Mock
-}
-
-const createPrismaMock = (): PrismaMock => ({
-  report: { findUnique: jest.fn() },
-  partner: { findMany: jest.fn(), count: jest.fn() },
-  $transaction: jest.fn(async (operations: Promise<unknown>[]) => Promise.all(operations))
+const createPrismaMock = () => ({
+  report: { findUnique: vi.fn() },
+  partner: { findMany: vi.fn(), count: vi.fn() },
+  $transaction: vi.fn(async (operations: Promise<unknown>[]) => Promise.all(operations))
 })
+
+type PrismaMock = ReturnType<typeof createPrismaMock>
 
 describe('GET /api/reports/:id/pending-partners', () => {
   let prismaMock: PrismaMock

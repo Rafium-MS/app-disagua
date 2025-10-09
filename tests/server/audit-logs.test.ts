@@ -1,19 +1,19 @@
 import type { PrismaClient } from '@prisma/client'
 import express from 'express'
 import request from 'supertest'
-import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createAuditLogsRouter } from '../../src/server/routes/audit-logs'
 
 const createPrismaMock = () => {
   const auditLog = {
-    findMany: jest.fn(),
-    count: jest.fn()
+    findMany: vi.fn(),
+    count: vi.fn()
   }
 
   return {
     auditLog,
-    $transaction: jest.fn(async (operations: Array<Promise<unknown>>) => Promise.all(operations))
+    $transaction: vi.fn(async (operations: Array<Promise<unknown>>) => Promise.all(operations))
   }
 }
 
