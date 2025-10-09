@@ -14,7 +14,8 @@
     "baseUrl": ".",
     "paths": {
       "@/components/*": ["src/renderer/components/*"],
-      "@/lib/*": ["src/renderer/lib/*"]
+      "@/lib/*": ["src/renderer/lib/*"],
+      "@/hooks/*": ["src/renderer/hooks/*"]
     }
   },
   "include": ["electron", "src", "vite.config.ts", "vitest.config.ts"]

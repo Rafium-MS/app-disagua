@@ -5,6 +5,7 @@ import {
   usePendingPartners,
   type PendingPartnerApiPayload as PendingPartner
 } from './hooks/usePendingPartners'
+import { AuditLogsPanel } from './components/AuditLogsPanel'
 
 type Partner = {
   id: number
@@ -805,6 +806,8 @@ export default function App() {
           )}
         </div>
       </section>
+
+      <AuditLogsPanel />
     </div>
   )
 }

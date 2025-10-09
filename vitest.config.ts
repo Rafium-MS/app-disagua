@@ -11,7 +11,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@/components': resolve(__dirname, 'src/renderer/components'),
-      '@/lib': resolve(__dirname, 'src/renderer/lib')
+      '@/lib': resolve(__dirname, 'src/renderer/lib'),
+      '@/hooks': resolve(__dirname, 'src/renderer/hooks')
     }
   },
   test: {
