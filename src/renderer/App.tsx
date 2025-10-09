@@ -1,12 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import {
-  FileText,
-  TimerReset,
-  TicketCheck,
-  TicketPercent,
-  Users
-} from 'lucide-react'
+import { FileText, TimerReset, TicketCheck, TicketPercent, Users } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
@@ -415,7 +409,9 @@ function StatCard({
     <article className="flex flex-col justify-between rounded-xl border border-border/50 bg-background/90 p-5 shadow-sm transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {label}
+          </p>
           <p className="mt-3 text-3xl font-semibold text-foreground">{value}</p>
         </div>
         <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -646,7 +642,10 @@ export default function App() {
             </p>
           </div>
           <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm">
-            <span className={`h-2.5 w-2.5 rounded-full ${getHealthColor(health)} animate-pulse`} aria-hidden />
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${getHealthColor(health)} animate-pulse`}
+              aria-hidden
+            />
             <span>Servidor: {health}</span>
           </div>
         </header>
@@ -654,7 +653,9 @@ export default function App() {
         <section className={`${panelSectionClassName} space-y-5`}>
           <div className="space-y-1">
             <h2 className="text-lg font-semibold">Resumo geral</h2>
-            <p className="text-sm text-muted-foreground">Indicadores consolidados para orientar decisões rápidas.</p>
+            <p className="text-sm text-muted-foreground">
+              Indicadores consolidados para orientar decisões rápidas.
+            </p>
           </div>
           {dashboardStatsState.status === 'loading' && (
             <p className="text-sm text-muted-foreground">Carregando resumo...</p>
@@ -680,7 +681,9 @@ export default function App() {
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Ações rápidas</h2>
-              <p className="text-sm text-muted-foreground">Facilite o dia a dia acessando os fluxos mais usados.</p>
+              <p className="text-sm text-muted-foreground">
+                Facilite o dia a dia acessando os fluxos mais usados.
+              </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button type="button" size="sm">
@@ -837,186 +840,190 @@ export default function App() {
         <section className="space-y-4">
           <div className="space-y-3">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Exportar comprovantes de relatório</h2>
-              <p className="text-sm text-muted-foreground">
-                Gere um arquivo consolidado com os comprovantes enviados pelos parceiros.
-              </p>
-            </div>
-            <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-end">
-              <div className="w-full lg:w-64">
-                <label htmlFor="export-report" className="sr-only">
-                  Selecionar relatório para exportação
-                </label>
-                <select
-                  id="export-report"
-                  value={reportExportReportId === 'none' ? 'none' : String(reportExportReportId)}
-                  onChange={(event) => {
-                    const nextValue = event.target.value
-                    if (nextValue === 'none') {
-                      setReportExportReportId('none')
-                      return
-                    }
-
-                    const parsedId = Number.parseInt(nextValue, 10)
-                    if (!Number.isNaN(parsedId)) {
-                      setReportExportReportId(parsedId)
-                    }
-                  }}
-                  className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  disabled={reportsState.status === 'loading'}
-                >
-                  <option value="none">Selecione um relatório</option>
-                  {reportsState.status === 'success' &&
-                    reportsState.data.map((report) => (
-                      <option key={report.id} value={report.id}>
-                        {report.title}
-                      </option>
-                    ))}
-                </select>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Escolha qual relatório deseja exportar
-                </p>
-              </div>
-              <div className="w-full lg:w-48">
-                <label htmlFor="export-format" className="sr-only">
-                  Selecionar formato de exportação
-                </label>
-                <select
-                  id="export-format"
-                  value={reportExportFormat}
-                  onChange={(event) => {
-                    const nextValue = event.target.value === 'zip' ? 'zip' : 'pdf'
-                    setReportExportFormat(nextValue)
-                  }}
-                  className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  disabled={reportExportReportId === 'none'}
-                >
-                  <option value="pdf">PDF consolidado</option>
-                  <option value="zip">Pacote ZIP</option>
-                </select>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Escolha o formato do arquivo gerado
-                </p>
-              </div>
-              <Button
-                type="button"
-                onClick={handleReportExport}
-                disabled={reportExportReportId === 'none' || reportExportState === 'loading'}
-              >
-                {reportExportState === 'loading'
-                  ? 'Gerando exportação...'
-                  : 'Exportar comprovantes'}
-              </Button>
-            </div>
-          </div>
-          {reportExportReportId === 'none' && (
-            <p className="text-sm text-muted-foreground">
-              Selecione um relatório para gerar a exportação dos comprovantes.
-            </p>
-          )}
-          {reportExportReportId !== 'none' && reportExportState === 'loading' && (
-            <p className="text-sm text-muted-foreground">Gerando exportação...</p>
-          )}
-          {reportExportState === 'error' && reportExportError && (
-            <p className="text-sm text-red-600">{reportExportError}</p>
-          )}
-          {reportExportState === 'success' && reportExportResult && (
-            <div className="space-y-4 rounded-xl border border-border/60 bg-background/90 p-5 shadow-sm">
               <div>
-                <p className="text-sm font-medium text-foreground">
-                  {reportExportResult.report.title}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Formato: {reportExportResult.file.format.toUpperCase()} • Caminho:{' '}
-                  {reportExportResult.file.path}
+                <h2 className="text-lg font-semibold">Exportar comprovantes de relatório</h2>
+                <p className="text-sm text-muted-foreground">
+                  Gere um arquivo consolidado com os comprovantes enviados pelos parceiros.
                 </p>
               </div>
-              <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
-                <div>
-                  <dt className="text-muted-foreground">Total de vouchers</dt>
-                  <dd className="font-medium">
-                    {formatNumber(reportExportResult.counts.totalVouchers)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Disponíveis</dt>
-                  <dd className="font-medium">
-                    {formatNumber(reportExportResult.counts.available)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Incluídos</dt>
-                  <dd className="font-medium">
-                    {formatNumber(reportExportResult.counts.included)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Ausentes</dt>
-                  <dd className="font-medium">{formatNumber(reportExportResult.counts.missing)}</dd>
-                </div>
-                <div>
-                  <dt className="text-muted-foreground">Não suportados</dt>
-                  <dd className="font-medium">
-                    {formatNumber(reportExportResult.counts.unsupported)}
-                  </dd>
-                </div>
-              </dl>
-              {reportExportResult.summary.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  Nenhum comprovante foi incluído no arquivo gerado.
-                </p>
-              ) : (
-                <div className="overflow-x-auto rounded-lg border border-border/60">
-                  <table className="min-w-full divide-y divide-border text-sm">
-                    <thead className="bg-muted/50">
-                      <tr>
-                        <th className="px-4 py-3 text-left font-medium">Voucher</th>
-                        <th className="px-4 py-3 text-left font-medium">Emitido em</th>
-                        <th className="px-4 py-3 text-left font-medium">Resgatado em</th>
-                        <th className="px-4 py-3 text-left font-medium">Status</th>
-                        <th className="px-4 py-3 text-left font-medium">Página</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border bg-background">
-                      {reportExportResult.summary.map((entry) => {
-                        const statusLabel = describeExportSummaryStatus(entry.status)
-                        const statusVariant = getExportSummaryVariant(entry.status)
-                        const statusClasses =
-                          statusVariant === 'success'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : statusVariant === 'warning'
-                              ? 'bg-amber-100 text-amber-800'
-                              : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+              <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-end">
+                <div className="w-full lg:w-64">
+                  <label htmlFor="export-report" className="sr-only">
+                    Selecionar relatório para exportação
+                  </label>
+                  <select
+                    id="export-report"
+                    value={reportExportReportId === 'none' ? 'none' : String(reportExportReportId)}
+                    onChange={(event) => {
+                      const nextValue = event.target.value
+                      if (nextValue === 'none') {
+                        setReportExportReportId('none')
+                        return
+                      }
 
-                        return (
-                          <tr key={entry.voucherId}>
-                            <td className="px-4 py-3 font-medium text-foreground">{entry.code}</td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {formatDateTime(entry.issuedAt)}
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {entry.redeemedAt ? formatDateTime(entry.redeemedAt) : '—'}
-                            </td>
-                            <td className="px-4 py-3">
-                              <span
-                                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses}`}
-                              >
-                                {statusLabel}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-muted-foreground">
-                              {entry.pageStart ? `Página ${entry.pageStart}` : '—'}
-                            </td>
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                      const parsedId = Number.parseInt(nextValue, 10)
+                      if (!Number.isNaN(parsedId)) {
+                        setReportExportReportId(parsedId)
+                      }
+                    }}
+                    className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    disabled={reportsState.status === 'loading'}
+                  >
+                    <option value="none">Selecione um relatório</option>
+                    {reportsState.status === 'success' &&
+                      reportsState.data.map((report) => (
+                        <option key={report.id} value={report.id}>
+                          {report.title}
+                        </option>
+                      ))}
+                  </select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Escolha qual relatório deseja exportar
+                  </p>
                 </div>
-              )}
+                <div className="w-full lg:w-48">
+                  <label htmlFor="export-format" className="sr-only">
+                    Selecionar formato de exportação
+                  </label>
+                  <select
+                    id="export-format"
+                    value={reportExportFormat}
+                    onChange={(event) => {
+                      const nextValue = event.target.value === 'zip' ? 'zip' : 'pdf'
+                      setReportExportFormat(nextValue)
+                    }}
+                    className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    disabled={reportExportReportId === 'none'}
+                  >
+                    <option value="pdf">PDF consolidado</option>
+                    <option value="zip">Pacote ZIP</option>
+                  </select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Escolha o formato do arquivo gerado
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={handleReportExport}
+                  disabled={reportExportReportId === 'none' || reportExportState === 'loading'}
+                >
+                  {reportExportState === 'loading'
+                    ? 'Gerando exportação...'
+                    : 'Exportar comprovantes'}
+                </Button>
+              </div>
             </div>
-          )}
+            {reportExportReportId === 'none' && (
+              <p className="text-sm text-muted-foreground">
+                Selecione um relatório para gerar a exportação dos comprovantes.
+              </p>
+            )}
+            {reportExportReportId !== 'none' && reportExportState === 'loading' && (
+              <p className="text-sm text-muted-foreground">Gerando exportação...</p>
+            )}
+            {reportExportState === 'error' && reportExportError && (
+              <p className="text-sm text-red-600">{reportExportError}</p>
+            )}
+            {reportExportState === 'success' && reportExportResult && (
+              <div className="space-y-4 rounded-xl border border-border/60 bg-background/90 p-5 shadow-sm">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {reportExportResult.report.title}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Formato: {reportExportResult.file.format.toUpperCase()} • Caminho:{' '}
+                    {reportExportResult.file.path}
+                  </p>
+                </div>
+                <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
+                  <div>
+                    <dt className="text-muted-foreground">Total de vouchers</dt>
+                    <dd className="font-medium">
+                      {formatNumber(reportExportResult.counts.totalVouchers)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Disponíveis</dt>
+                    <dd className="font-medium">
+                      {formatNumber(reportExportResult.counts.available)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Incluídos</dt>
+                    <dd className="font-medium">
+                      {formatNumber(reportExportResult.counts.included)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Ausentes</dt>
+                    <dd className="font-medium">
+                      {formatNumber(reportExportResult.counts.missing)}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">Não suportados</dt>
+                    <dd className="font-medium">
+                      {formatNumber(reportExportResult.counts.unsupported)}
+                    </dd>
+                  </div>
+                </dl>
+                {reportExportResult.summary.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum comprovante foi incluído no arquivo gerado.
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-border/60">
+                    <table className="min-w-full divide-y divide-border text-sm">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-medium">Voucher</th>
+                          <th className="px-4 py-3 text-left font-medium">Emitido em</th>
+                          <th className="px-4 py-3 text-left font-medium">Resgatado em</th>
+                          <th className="px-4 py-3 text-left font-medium">Status</th>
+                          <th className="px-4 py-3 text-left font-medium">Página</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border bg-background">
+                        {reportExportResult.summary.map((entry) => {
+                          const statusLabel = describeExportSummaryStatus(entry.status)
+                          const statusVariant = getExportSummaryVariant(entry.status)
+                          const statusClasses =
+                            statusVariant === 'success'
+                              ? 'bg-emerald-100 text-emerald-800'
+                              : statusVariant === 'warning'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+
+                          return (
+                            <tr key={entry.voucherId}>
+                              <td className="px-4 py-3 font-medium text-foreground">
+                                {entry.code}
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {formatDateTime(entry.issuedAt)}
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {entry.redeemedAt ? formatDateTime(entry.redeemedAt) : '—'}
+                              </td>
+                              <td className="px-4 py-3">
+                                <span
+                                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses}`}
+                                >
+                                  {statusLabel}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-muted-foreground">
+                                {entry.pageStart ? `Página ${entry.pageStart}` : '—'}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </section>
         <section className={`${panelSectionClassName} space-y-5`}>
@@ -1155,194 +1162,203 @@ export default function App() {
               </table>
             </div>
           )}
-          {pendingPartnersState.status === 'success' && pendingPartnersState.pagination.totalPages > 1 && (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-muted-foreground">
-                Página {pendingPartnersState.pagination.page} de {pendingPartnersState.pagination.totalPages}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPendingPartnersPage((current) => Math.max(1, current - 1))}
-                  disabled={pendingPartnersPage <= 1}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPendingPartnersPage((current) =>
-                      Math.min(pendingPartnersState.pagination.totalPages, current + 1)
-                    )
-                  }
-                  disabled={pendingPartnersPage >= pendingPartnersState.pagination.totalPages}
-                >
-                  Próxima
-                </Button>
+          {pendingPartnersState.status === 'success' &&
+            pendingPartnersState.pagination.totalPages > 1 && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Página {pendingPartnersState.pagination.page} de{' '}
+                  {pendingPartnersState.pagination.totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPendingPartnersPage((current) => Math.max(1, current - 1))}
+                    disabled={pendingPartnersPage <= 1}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setPendingPartnersPage((current) =>
+                        Math.min(pendingPartnersState.pagination.totalPages, current + 1)
+                      )
+                    }
+                    disabled={pendingPartnersPage >= pendingPartnersState.pagination.totalPages}
+                  >
+                    Próxima
+                  </Button>
+                </div>
+              </div>
+            )}
+        </section>
+
+        <section className="space-y-4">
+          <div className="space-y-3">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-lg font-semibold">Vouchers emitidos</h2>
+                <p className="text-sm text-muted-foreground">
+                  Acompanhe os vouchers gerados, o status de resgate e os relacionamentos com
+                  parceiros.
+                </p>
+              </div>
+              <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
+                <div className="w-full sm:w-48">
+                  <label htmlFor="vouchers-report" className="sr-only">
+                    Filtrar vouchers por relatório
+                  </label>
+                  <select
+                    id="vouchers-report"
+                    value={voucherReportFilter === 'all' ? 'all' : String(voucherReportFilter)}
+                    onChange={(event) => {
+                      const nextValue = event.target.value
+                      if (nextValue === 'all') {
+                        setVoucherReportFilter('all')
+                        return
+                      }
+
+                      const parsedReportId = Number.parseInt(nextValue, 10)
+                      if (!Number.isNaN(parsedReportId)) {
+                        setVoucherReportFilter(parsedReportId)
+                      }
+                    }}
+                    className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    disabled={reportsState.status === 'loading'}
+                  >
+                    <option value="all">Todos os relatórios</option>
+                    {reportsState.status === 'success' &&
+                      reportsState.data.map((report) => (
+                        <option key={report.id} value={report.id}>
+                          {report.title}
+                        </option>
+                      ))}
+                  </select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Filtrar vouchers por relatório
+                  </p>
+                </div>
+                <div className="w-full sm:w-48">
+                  <label htmlFor="vouchers-partner" className="sr-only">
+                    Filtrar vouchers por parceiro
+                  </label>
+                  <select
+                    id="vouchers-partner"
+                    value={voucherPartnerFilter === 'all' ? 'all' : String(voucherPartnerFilter)}
+                    onChange={(event) => {
+                      const nextValue = event.target.value
+                      if (nextValue === 'all') {
+                        setVoucherPartnerFilter('all')
+                        return
+                      }
+
+                      const parsedPartnerId = Number.parseInt(nextValue, 10)
+                      if (!Number.isNaN(parsedPartnerId)) {
+                        setVoucherPartnerFilter(parsedPartnerId)
+                      }
+                    }}
+                    className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    disabled={partnersState.status === 'loading'}
+                  >
+                    <option value="all">Todos os parceiros</option>
+                    {partnersState.status === 'success' &&
+                      partnersState.data.map((partner) => (
+                        <option key={partner.id} value={partner.id}>
+                          {partner.name}
+                        </option>
+                      ))}
+                  </select>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Filtrar vouchers por parceiro
+                  </p>
+                </div>
+                <div className="w-full sm:w-48">
+                  <label htmlFor="vouchers-status" className="sr-only">
+                    Filtrar vouchers por status
+                  </label>
+                  <select
+                    id="vouchers-status"
+                    value={voucherStatusFilter}
+                    onChange={(event) => {
+                      const nextValue = event.target.value
+                      if (
+                        nextValue === 'all' ||
+                        nextValue === 'redeemed' ||
+                        nextValue === 'pending'
+                      ) {
+                        setVoucherStatusFilter(nextValue)
+                      }
+                    }}
+                    className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  >
+                    <option value="all">Todos os vouchers</option>
+                    <option value="redeemed">Apenas resgatados</option>
+                    <option value="pending">Apenas pendentes</option>
+                  </select>
+                  <p className="mt-1 text-xs text-muted-foreground">Filtrar vouchers por status</p>
+                </div>
               </div>
             </div>
-          )}
-        </div>
-      </section>
+            {vouchersState.status === 'loading' && (
+              <p className="text-sm text-muted-foreground">Carregando vouchers...</p>
+            )}
+            {vouchersState.status === 'error' && (
+              <p className="text-sm text-red-600">Não foi possível carregar os vouchers.</p>
+            )}
+            {vouchersState.status === 'success' && vouchersState.data.length === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhum voucher disponível.</p>
+            )}
+            {vouchersState.status === 'success' && vouchersState.data.length > 0 && (
+              <div className="overflow-x-auto rounded-lg border border-border/60">
+                <table className="min-w-full divide-y divide-border text-sm">
+                  <thead className="bg-muted/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-medium">Código</th>
+                      <th className="px-4 py-3 text-left font-medium">Parceiro</th>
+                      <th className="px-4 py-3 text-left font-medium">Relatório</th>
+                      <th className="px-4 py-3 text-left font-medium">Emitido em</th>
+                      <th className="px-4 py-3 text-left font-medium">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border bg-background">
+                    {vouchersState.data.map((voucher) => {
+                      const status = getVoucherStatus(voucher.redeemedAt)
 
-      <section className="space-y-4">
-        <div className="space-y-3">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Vouchers emitidos</h2>
-              <p className="text-sm text-muted-foreground">
-                Acompanhe os vouchers gerados, o status de resgate e os relacionamentos com parceiros.
-              </p>
-            </div>
-            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
-              <div className="w-full sm:w-48">
-                <label htmlFor="vouchers-report" className="sr-only">
-                  Filtrar vouchers por relatório
-                </label>
-                <select
-                  id="vouchers-report"
-                  value={voucherReportFilter === 'all' ? 'all' : String(voucherReportFilter)}
-                  onChange={(event) => {
-                    const nextValue = event.target.value
-                    if (nextValue === 'all') {
-                      setVoucherReportFilter('all')
-                      return
-                    }
-
-                    const parsedReportId = Number.parseInt(nextValue, 10)
-                    if (!Number.isNaN(parsedReportId)) {
-                      setVoucherReportFilter(parsedReportId)
-                    }
-                  }}
-                  className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  disabled={reportsState.status === 'loading'}
-                >
-                  <option value="all">Todos os relatórios</option>
-                  {reportsState.status === 'success' &&
-                    reportsState.data.map((report) => (
-                      <option key={report.id} value={report.id}>
-                        {report.title}
-                      </option>
-                    ))}
-                </select>
-                <p className="mt-1 text-xs text-muted-foreground">Filtrar vouchers por relatório</p>
+                      return (
+                        <tr key={voucher.id} className="hover:bg-muted/30">
+                          <td className="px-4 py-3 font-medium text-foreground">{voucher.code}</td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {voucher.partner.name}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {voucher.report ? voucher.report.title : '—'}
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">
+                            {formatDateTime(voucher.issuedAt)}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                                status.variant === 'success'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}
+                            >
+                              {status.label}
+                            </span>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
-              <div className="w-full sm:w-48">
-                <label htmlFor="vouchers-partner" className="sr-only">
-                  Filtrar vouchers por parceiro
-                </label>
-                <select
-                  id="vouchers-partner"
-                  value={voucherPartnerFilter === 'all' ? 'all' : String(voucherPartnerFilter)}
-                  onChange={(event) => {
-                    const nextValue = event.target.value
-                    if (nextValue === 'all') {
-                      setVoucherPartnerFilter('all')
-                      return
-                    }
-
-                    const parsedPartnerId = Number.parseInt(nextValue, 10)
-                    if (!Number.isNaN(parsedPartnerId)) {
-                      setVoucherPartnerFilter(parsedPartnerId)
-                    }
-                  }}
-                  className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  disabled={partnersState.status === 'loading'}
-                >
-                  <option value="all">Todos os parceiros</option>
-                  {partnersState.status === 'success' &&
-                    partnersState.data.map((partner) => (
-                      <option key={partner.id} value={partner.id}>
-                        {partner.name}
-                      </option>
-                    ))}
-                </select>
-                <p className="mt-1 text-xs text-muted-foreground">Filtrar vouchers por parceiro</p>
-              </div>
-              <div className="w-full sm:w-48">
-                <label htmlFor="vouchers-status" className="sr-only">
-                  Filtrar vouchers por status
-                </label>
-                <select
-                  id="vouchers-status"
-                  value={voucherStatusFilter}
-                  onChange={(event) => {
-                    const nextValue = event.target.value
-                    if (
-                      nextValue === 'all' ||
-                      nextValue === 'redeemed' ||
-                      nextValue === 'pending'
-                    ) {
-                      setVoucherStatusFilter(nextValue)
-                    }
-                  }}
-                  className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                >
-                  <option value="all">Todos os vouchers</option>
-                  <option value="redeemed">Apenas resgatados</option>
-                  <option value="pending">Apenas pendentes</option>
-                </select>
-                <p className="mt-1 text-xs text-muted-foreground">Filtrar vouchers por status</p>
-              </div>
-            </div>
+            )}
           </div>
-          {vouchersState.status === 'loading' && (
-            <p className="text-sm text-muted-foreground">Carregando vouchers...</p>
-          )}
-          {vouchersState.status === 'error' && (
-            <p className="text-sm text-red-600">Não foi possível carregar os vouchers.</p>
-          )}
-          {vouchersState.status === 'success' && vouchersState.data.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhum voucher disponível.</p>
-          )}
-          {vouchersState.status === 'success' && vouchersState.data.length > 0 && (
-            <div className="overflow-x-auto rounded-lg border border-border/60">
-              <table className="min-w-full divide-y divide-border text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium">Código</th>
-                    <th className="px-4 py-3 text-left font-medium">Parceiro</th>
-                    <th className="px-4 py-3 text-left font-medium">Relatório</th>
-                    <th className="px-4 py-3 text-left font-medium">Emitido em</th>
-                    <th className="px-4 py-3 text-left font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border bg-background">
-                  {vouchersState.data.map((voucher) => {
-                    const status = getVoucherStatus(voucher.redeemedAt)
-
-                    return (
-                      <tr key={voucher.id} className="hover:bg-muted/30">
-                        <td className="px-4 py-3 font-medium text-foreground">{voucher.code}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{voucher.partner.name}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {voucher.report ? voucher.report.title : '—'}
-                        </td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {formatDateTime(voucher.issuedAt)}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
-                              status.variant === 'success'
-                                ? 'bg-emerald-100 text-emerald-800'
-                                : 'bg-amber-100 text-amber-800'
-                            }`}
-                          >
-                            {status.label}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
         </section>
 
         <AuditLogsPanel />
