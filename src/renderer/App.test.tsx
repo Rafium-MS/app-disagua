@@ -13,6 +13,7 @@ describe('App', () => {
     expect(markup).toContain('Filtrar vouchers por status')
     expect(markup).toContain('Filtrar vouchers por relatório')
     expect(markup).toContain('Filtrar vouchers por parceiro')
+    expect(markup).toContain('Exportar comprovantes de relatório')
     expect(markup).toContain('Todos os vouchers')
     expect(markup).toContain('Todos os parceiros')
     expect(markup).toContain('Carregando resumo...')
