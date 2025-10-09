@@ -63,7 +63,7 @@ export function AuditLogsPanel() {
   }, [])
 
   return (
-    <section className="space-y-4">
+    <section className="rounded-2xl border border-border/60 bg-background/80 p-6 shadow-sm backdrop-blur space-y-5">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold">Auditoria de mudanças</h2>
@@ -73,7 +73,10 @@ export function AuditLogsPanel() {
         </div>
       </div>
 
-      <form onSubmit={handleFilterSubmit} className="grid gap-4 rounded-lg border bg-background p-4 sm:grid-cols-2 lg:grid-cols-3">
+      <form
+        onSubmit={handleFilterSubmit}
+        className="grid gap-4 rounded-xl border border-border/60 bg-background/90 p-4 shadow-sm sm:grid-cols-2 lg:grid-cols-3"
+      >
         <label className="space-y-1">
           <span className="block text-sm font-medium text-foreground">Entidade</span>
           <input
@@ -144,7 +147,7 @@ export function AuditLogsPanel() {
         </div>
       </form>
 
-      <div className="overflow-x-auto rounded-lg border">
+      <div className="overflow-x-auto rounded-lg border border-border/60">
         <table className="min-w-full divide-y divide-border text-sm">
           <thead className="bg-muted/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
             <tr>
