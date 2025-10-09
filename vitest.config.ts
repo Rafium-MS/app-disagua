@@ -17,6 +17,8 @@ export default defineConfig({
   },
   test: {
     environment: 'node',
-    globals: true
+    globals: true,
+    pool: 'threads',
+    maxConcurrency: 1
   }
 })
