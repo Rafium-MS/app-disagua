@@ -47,6 +47,31 @@ type VoucherStatusFilter = 'all' | 'redeemed' | 'pending'
 type VoucherPartnerFilter = 'all' | number
 type VoucherReportFilter = 'all' | number
 
+type ReportExportFormat = 'pdf' | 'zip'
+
+type ReportExportSummaryEntry = {
+  voucherId: number
+  code: string
+  issuedAt: string
+  redeemedAt: string | null
+  status: 'included' | 'missing' | 'unsupported'
+  pageStart: number | null
+}
+
+type ReportExportResult = {
+  report: { id: number; title: string }
+  file: { path: string; format: ReportExportFormat }
+  counts: {
+    totalVouchers: number
+    available: number
+    included: number
+    missing: number
+    unsupported: number
+  }
+  summary: ReportExportSummaryEntry[]
+}
+
+type ReportExportState = 'idle' | 'loading' | 'success' | 'error'
 
 type DashboardStats = {
   partnersCount: number
@@ -266,6 +291,30 @@ function getPendingPartnerStatusVariant(stats: PendingPartner['reportVoucherStat
   return 'warning' as const
 }
 
+function describeExportSummaryStatus(status: ReportExportSummaryEntry['status']) {
+  if (status === 'included') {
+    return 'Incluído no arquivo'
+  }
+
+  if (status === 'missing') {
+    return 'Arquivo ausente'
+  }
+
+  return 'Formato não suportado'
+}
+
+function getExportSummaryVariant(status: ReportExportSummaryEntry['status']) {
+  if (status === 'included') {
+    return 'success' as const
+  }
+
+  if (status === 'missing') {
+    return 'warning' as const
+  }
+
+  return 'neutral' as const
+}
+
 const numberFormatter = new Intl.NumberFormat('pt-BR')
 
 function formatNumber(value: number) {
@@ -300,6 +349,11 @@ export default function App() {
   const [voucherPartnerFilter, setVoucherPartnerFilter] = useState<VoucherPartnerFilter>('all')
   const [voucherReportFilter, setVoucherReportFilter] = useState<VoucherReportFilter>('all')
   const vouchersState = useVouchers(voucherStatusFilter, voucherPartnerFilter, voucherReportFilter)
+  const [reportExportReportId, setReportExportReportId] = useState<number | 'none'>('none')
+  const [reportExportFormat, setReportExportFormat] = useState<ReportExportFormat>('pdf')
+  const [reportExportState, setReportExportState] = useState<ReportExportState>('idle')
+  const [reportExportResult, setReportExportResult] = useState<ReportExportResult | null>(null)
+  const [reportExportError, setReportExportError] = useState<string | null>(null)
 
   useEffect(() => {
     if (voucherPartnerFilter === 'all') {
@@ -352,6 +406,30 @@ export default function App() {
     setPendingPartnersPage(1)
   }, [pendingPartnersReportId])
   useEffect(() => {
+    if (reportsState.status !== 'success') {
+      return
+    }
+
+    if (reportExportReportId !== 'none') {
+      const reportExists = reportsState.data.some((report) => report.id === reportExportReportId)
+      if (!reportExists) {
+        const fallback = reportsState.data[0]
+        setReportExportReportId(fallback ? fallback.id : 'none')
+      }
+      return
+    }
+
+    const fallback = reportsState.data[0]
+    if (fallback) {
+      setReportExportReportId(fallback.id)
+    }
+  }, [reportExportReportId, reportsState])
+  useEffect(() => {
+    setReportExportState('idle')
+    setReportExportError(null)
+    setReportExportResult(null)
+  }, [reportExportReportId])
+  useEffect(() => {
     if (pendingPartnersState.status !== 'success') {
       return
     }
@@ -369,6 +447,61 @@ export default function App() {
     }
   }, [pendingPartnersPage, pendingPartnersState])
   const dashboardStatsState = useDashboardStats()
+
+  const handleReportExport = async () => {
+    if (reportExportReportId === 'none') {
+      return
+    }
+
+    setReportExportState('loading')
+    setReportExportError(null)
+
+    const params = new URLSearchParams()
+    params.set('format', reportExportFormat)
+
+    try {
+      const response = await fetch(
+        `http://localhost:5174/api/reports/${reportExportReportId}/export?${params.toString()}`,
+        {
+          method: 'POST'
+        }
+      )
+
+      const payload = await response
+        .json()
+        .catch(() => null) as { data?: unknown; error?: unknown } | null
+
+      if (!response.ok) {
+        const message =
+          payload && typeof payload.error === 'string'
+            ? payload.error
+            : 'Não foi possível exportar os comprovantes do relatório.'
+
+        setReportExportState('error')
+        setReportExportError(message)
+        setReportExportResult(null)
+        return
+      }
+
+      if (!payload || typeof payload.data !== 'object' || payload.data === null) {
+        setReportExportState('error')
+        setReportExportError('Resposta inválida do servidor.')
+        setReportExportResult(null)
+        return
+      }
+
+      setReportExportResult(payload.data as ReportExportResult)
+      setReportExportState('success')
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        return
+      }
+
+      setReportExportState('error')
+      setReportExportError('Não foi possível exportar os comprovantes do relatório.')
+      setReportExportResult(null)
+    }
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -555,6 +688,171 @@ export default function App() {
       )}
     </div>
   </section>
+
+      <section className="space-y-4">
+        <div className="space-y-3">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Exportar comprovantes de relatório</h2>
+              <p className="text-sm text-muted-foreground">
+                Gere um arquivo consolidado com os comprovantes enviados pelos parceiros.
+              </p>
+            </div>
+            <div className="flex w-full flex-col gap-3 lg:w-auto lg:flex-row lg:items-end">
+              <div className="w-full lg:w-64">
+                <label htmlFor="export-report" className="sr-only">
+                  Selecionar relatório para exportação
+                </label>
+                <select
+                  id="export-report"
+                  value={reportExportReportId === 'none' ? 'none' : String(reportExportReportId)}
+                  onChange={(event) => {
+                    const nextValue = event.target.value
+                    if (nextValue === 'none') {
+                      setReportExportReportId('none')
+                      return
+                    }
+
+                    const parsedId = Number.parseInt(nextValue, 10)
+                    if (!Number.isNaN(parsedId)) {
+                      setReportExportReportId(parsedId)
+                    }
+                  }}
+                  className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  disabled={reportsState.status === 'loading'}
+                >
+                  <option value="none">Selecione um relatório</option>
+                  {reportsState.status === 'success' &&
+                    reportsState.data.map((report) => (
+                      <option key={report.id} value={report.id}>
+                        {report.title}
+                      </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">Escolha qual relatório deseja exportar</p>
+              </div>
+              <div className="w-full lg:w-48">
+                <label htmlFor="export-format" className="sr-only">
+                  Selecionar formato de exportação
+                </label>
+                <select
+                  id="export-format"
+                  value={reportExportFormat}
+                  onChange={(event) => {
+                    const nextValue = event.target.value === 'zip' ? 'zip' : 'pdf'
+                    setReportExportFormat(nextValue)
+                  }}
+                  className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  disabled={reportExportReportId === 'none'}
+                >
+                  <option value="pdf">PDF consolidado</option>
+                  <option value="zip">Pacote ZIP</option>
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">Escolha o formato do arquivo gerado</p>
+              </div>
+              <Button
+                type="button"
+                onClick={handleReportExport}
+                disabled={reportExportReportId === 'none' || reportExportState === 'loading'}
+              >
+                {reportExportState === 'loading' ? 'Gerando exportação...' : 'Exportar comprovantes'}
+              </Button>
+            </div>
+          </div>
+          {reportExportReportId === 'none' && (
+            <p className="text-sm text-muted-foreground">
+              Selecione um relatório para gerar a exportação dos comprovantes.
+            </p>
+          )}
+          {reportExportReportId !== 'none' && reportExportState === 'loading' && (
+            <p className="text-sm text-muted-foreground">Gerando exportação...</p>
+          )}
+          {reportExportState === 'error' && reportExportError && (
+            <p className="text-sm text-red-600">{reportExportError}</p>
+          )}
+          {reportExportState === 'success' && reportExportResult && (
+            <div className="space-y-4 rounded-md border bg-background p-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">{reportExportResult.report.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  Formato: {reportExportResult.file.format.toUpperCase()} • Caminho: {reportExportResult.file.path}
+                </p>
+              </div>
+              <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
+                <div>
+                  <dt className="text-muted-foreground">Total de vouchers</dt>
+                  <dd className="font-medium">{formatNumber(reportExportResult.counts.totalVouchers)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Disponíveis</dt>
+                  <dd className="font-medium">{formatNumber(reportExportResult.counts.available)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Incluídos</dt>
+                  <dd className="font-medium">{formatNumber(reportExportResult.counts.included)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Ausentes</dt>
+                  <dd className="font-medium">{formatNumber(reportExportResult.counts.missing)}</dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Não suportados</dt>
+                  <dd className="font-medium">{formatNumber(reportExportResult.counts.unsupported)}</dd>
+                </div>
+              </dl>
+              {reportExportResult.summary.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum comprovante foi incluído no arquivo gerado.
+                </p>
+              ) : (
+                <div className="overflow-x-auto rounded-md border">
+                  <table className="min-w-full divide-y divide-border text-sm">
+                    <thead className="bg-muted/50">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-medium">Voucher</th>
+                        <th className="px-4 py-3 text-left font-medium">Emitido em</th>
+                        <th className="px-4 py-3 text-left font-medium">Resgatado em</th>
+                        <th className="px-4 py-3 text-left font-medium">Status</th>
+                        <th className="px-4 py-3 text-left font-medium">Página</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border bg-background">
+                      {reportExportResult.summary.map((entry) => {
+                        const statusLabel = describeExportSummaryStatus(entry.status)
+                        const statusVariant = getExportSummaryVariant(entry.status)
+                        const statusClasses =
+                          statusVariant === 'success'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : statusVariant === 'warning'
+                              ? 'bg-amber-100 text-amber-800'
+                              : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+
+                        return (
+                          <tr key={entry.voucherId}>
+                            <td className="px-4 py-3 font-medium text-foreground">{entry.code}</td>
+                            <td className="px-4 py-3 text-muted-foreground">{formatDateTime(entry.issuedAt)}</td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {entry.redeemedAt ? formatDateTime(entry.redeemedAt) : '—'}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses}`}>
+                                {statusLabel}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {entry.pageStart ? `Página ${entry.pageStart}` : '—'}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </section>
 
       <section className="space-y-4">
         <div className="space-y-3">
