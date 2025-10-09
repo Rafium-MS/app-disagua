@@ -5,7 +5,8 @@ module.exports = {
   extensionsToTreatAsEsm: ['.ts'],
   testMatch: ['**/tests/**/*.test.ts'],
   moduleNameMapper: {
-    '^(.*)\.js$': '$1'
+    '^(.*)\.js$': '$1',
+    '^@/(.*)$': '<rootDir>/src/renderer/$1'
   },
   globals: {
     'ts-jest': {

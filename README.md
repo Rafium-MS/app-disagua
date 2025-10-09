@@ -54,6 +54,9 @@ Projeto base com:
 - `GET /reports` → lista relatórios com parceiro associado e data de emissão (aceita `?partnerId=` para filtrar por parceiro).
 - `GET /vouchers` → lista vouchers emitidos, com parceiro relacionado e status de resgate (aceita `?status=pending|redeemed` e `?partnerId=` para filtrar por parceiro).
 - `GET /stats` → retorna contagens de parceiros, relatórios e vouchers (resgatados e pendentes).
+- `GET /audit-logs` → consulta o histórico de auditoria com filtros opcionais (`entity`, `action`, `actor`, `from`, `to`, `page`, `pageSize`).
+
+As rotas que criam, atualizam ou removem registros geram automaticamente entradas na tabela de auditoria. Para informar o usuário responsável pela alteração, envie o cabeçalho `X-Actor-Id` (ou `X-User-Id`) na requisição.
 
 Servidor embutido é iniciado pelo processo principal do Electron. No modo `dev`, a UI roda em `http://localhost:5173` e o servidor em `http://localhost:5174`.
 

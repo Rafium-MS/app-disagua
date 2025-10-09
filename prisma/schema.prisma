@@ -45,3 +45,17 @@ model Voucher {
   @@index([partnerId])
   @@index([reportId])
 }
+
+model AuditLog {
+  id            Int      @id @default(autoincrement())
+  createdAt     DateTime @default(now())
+  action        String
+  entity        String
+  entityId      String?
+  actor         String?
+  requestId     String?
+  requestMethod String?
+  requestUrl    String?
+  ipAddress     String?
+  changes       String?
+}
