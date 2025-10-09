@@ -7,16 +7,17 @@ import { partnersRouter } from './routes/partners'
 import { reportsRouter } from './routes/reports'
 import { vouchersRouter } from './routes/vouchers'
 import { auditLogsRouter } from './routes/audit-logs'
+import { buildCorsOptions } from './config/cors'
 
 export function createApp() {
   const app = express()
-  app.use(cors())
+  app.use(cors(buildCorsOptions()))
   app.use(express.json())
   app.use(requestContextMiddleware)
 
   // Healthcheck
   app.get('/health', (_req, res) => {
-    res.json({ status: 'ok' })
+    res.json({ ok: true })
   })
 
   app.use(['/api/partners', '/partners'], partnersRouter)

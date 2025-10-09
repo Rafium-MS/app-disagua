@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto'
 import path from 'node:path'
 import multer from 'multer'
 import { Router } from 'express'
+import type { Request } from 'express'
 import { z } from 'zod'
 
 import { prisma } from '../prisma'
@@ -144,6 +145,8 @@ const createVouchersRouter = ({ prisma: prismaClient }: { prisma: PrismaClient }
     const { id } = parsedParams.data
 
     upload.single('file')(req, res, async error => {
+      const requestWithFile = req as Request & { file?: { filename: string } }
+
       if (error instanceof multer.MulterError) {
         if (error.code === 'LIMIT_FILE_SIZE') {
           res
@@ -167,13 +170,13 @@ const createVouchersRouter = ({ prisma: prismaClient }: { prisma: PrismaClient }
         return
       }
 
-      if (!req.file) {
+      if (!requestWithFile.file) {
         res.status(400).json({ error: 'Nenhum arquivo foi enviado.' })
         return
       }
 
       try {
-        const relativeFilePath = path.posix.join('data', 'uploads', req.file.filename)
+        const relativeFilePath = path.posix.join('data', 'uploads', requestWithFile.file.filename)
 
         const voucher = await prismaClient.voucher.update({
           where: { id },

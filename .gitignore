@@ -5,6 +5,7 @@ node_modules/
 dist/
 out/
 build/
+dist-electron/
 coverage/
 .vite/
 .cache/
@@ -44,6 +45,10 @@ prisma/*.sqlite
 
 # Electron
 *.asar
+
+# Data directories
+data/uploads/
+data/exports/
 
 # Misc
 *.local
