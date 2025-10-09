@@ -15,7 +15,10 @@
     "paths": {
       "@/components/*": ["src/renderer/components/*"],
       "@/lib/*": ["src/renderer/lib/*"],
-      "@/hooks/*": ["src/renderer/hooks/*"]
+      "@/hooks/*": ["src/renderer/hooks/*"],
+      "@/routes/*": ["src/renderer/routes/*"],
+      "@/types/*": ["src/renderer/types/*"],
+      "@/pages/*": ["src/renderer/pages/*"]
     }
   },
   "include": ["electron", "src", "vite.config.ts", "vitest.config.ts"]
