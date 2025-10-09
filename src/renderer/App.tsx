@@ -45,6 +45,7 @@ type VouchersState =
 
 type VoucherStatusFilter = 'all' | 'redeemed' | 'pending'
 type VoucherPartnerFilter = 'all' | number
+type VoucherReportFilter = 'all' | number
 
 
 type DashboardStats = {
@@ -122,7 +123,11 @@ function usePartners(search: string): PartnersState {
   return state
 }
 
-function useVouchers(status: VoucherStatusFilter, partner: VoucherPartnerFilter): VouchersState {
+function useVouchers(
+  status: VoucherStatusFilter,
+  partner: VoucherPartnerFilter,
+  report: VoucherReportFilter
+): VouchersState {
   const [state, setState] = useState<VouchersState>({ status: 'loading', data: [] })
 
   useEffect(() => {
@@ -138,6 +143,10 @@ function useVouchers(status: VoucherStatusFilter, partner: VoucherPartnerFilter)
 
     if (partner !== 'all') {
       params.set('partnerId', String(partner))
+    }
+
+    if (report !== 'all') {
+      params.set('reportId', String(report))
     }
 
     const url = `http://localhost:5174/vouchers${params.size > 0 ? `?${params.toString()}` : ''}`
@@ -168,7 +177,7 @@ function useVouchers(status: VoucherStatusFilter, partner: VoucherPartnerFilter)
       canceled = true
       controller.abort()
     }
-  }, [status, partner])
+  }, [partner, report, status])
 
   return state
 }
@@ -289,7 +298,8 @@ export default function App() {
   })
   const [voucherStatusFilter, setVoucherStatusFilter] = useState<VoucherStatusFilter>('all')
   const [voucherPartnerFilter, setVoucherPartnerFilter] = useState<VoucherPartnerFilter>('all')
-  const vouchersState = useVouchers(voucherStatusFilter, voucherPartnerFilter)
+  const [voucherReportFilter, setVoucherReportFilter] = useState<VoucherReportFilter>('all')
+  const vouchersState = useVouchers(voucherStatusFilter, voucherPartnerFilter, voucherReportFilter)
 
   useEffect(() => {
     if (voucherPartnerFilter === 'all') {
@@ -305,6 +315,20 @@ export default function App() {
       setVoucherPartnerFilter('all')
     }
   }, [partnersState, voucherPartnerFilter])
+  useEffect(() => {
+    if (voucherReportFilter === 'all') {
+      return
+    }
+
+    if (reportsState.status !== 'success') {
+      return
+    }
+
+    const reportExists = reportsState.data.some((report) => report.id === voucherReportFilter)
+    if (!reportExists) {
+      setVoucherReportFilter('all')
+    }
+  }, [reportsState, voucherReportFilter])
   useEffect(() => {
     if (reportsState.status !== 'success') {
       return
@@ -698,6 +722,38 @@ export default function App() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <h2 className="text-lg font-semibold">Vouchers emitidos</h2>
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
+              <div className="w-full sm:w-48">
+                <label htmlFor="vouchers-report" className="sr-only">
+                  Filtrar vouchers por relatório
+                </label>
+                <select
+                  id="vouchers-report"
+                  value={voucherReportFilter === 'all' ? 'all' : String(voucherReportFilter)}
+                  onChange={(event) => {
+                    const nextValue = event.target.value
+                    if (nextValue === 'all') {
+                      setVoucherReportFilter('all')
+                      return
+                    }
+
+                    const parsedReportId = Number.parseInt(nextValue, 10)
+                    if (!Number.isNaN(parsedReportId)) {
+                      setVoucherReportFilter(parsedReportId)
+                    }
+                  }}
+                  className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  disabled={reportsState.status === 'loading'}
+                >
+                  <option value="all">Todos os relatórios</option>
+                  {reportsState.status === 'success' &&
+                    reportsState.data.map((report) => (
+                      <option key={report.id} value={report.id}>
+                        {report.title}
+                      </option>
+                    ))}
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">Filtrar vouchers por relatório</p>
+              </div>
               <div className="w-full sm:w-48">
                 <label htmlFor="vouchers-partner" className="sr-only">
                   Filtrar vouchers por parceiro

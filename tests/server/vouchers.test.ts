@@ -71,6 +71,42 @@ describe('GET /api/vouchers', () => {
     )
   })
 
+  it('filtra vouchers por relatório', async () => {
+    const vouchers = [
+      {
+        id: 2,
+        code: 'REL456',
+        issuedAt: new Date(),
+        redeemedAt: null,
+        partner: { id: 4, name: 'Parceiro 4' },
+        report: { id: 8, title: 'Relatório Especial' }
+      }
+    ]
+
+    prismaMock.voucher.findMany.mockResolvedValue(vouchers)
+    prismaMock.voucher.count.mockResolvedValue(1)
+
+    const app = express()
+    app.use('/api/vouchers', createVouchersRouter({ prisma: prismaMock as unknown as PrismaClient }))
+
+    const response = await request(app)
+      .get('/api/vouchers')
+      .query({ reportId: 8, page: 1, pageSize: 5 })
+
+    expect(response.status).toBe(200)
+    expect(prismaMock.voucher.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { reportId: 8 }
+      })
+    )
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        data: vouchers,
+        pagination: expect.objectContaining({ total: 1, totalPages: 1 })
+      })
+    )
+  })
+
   it('retorna erro 400 para status inválido', async () => {
     const app = express()
     app.use('/api/vouchers', createVouchersRouter({ prisma: prismaMock as unknown as PrismaClient }))
