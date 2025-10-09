@@ -835,8 +835,8 @@ export default function App() {
         </section>
 
         <section className="space-y-4">
-        <div className="space-y-3">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="space-y-3">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Exportar comprovantes de relatório</h2>
               <p className="text-sm text-muted-foreground">
@@ -1017,6 +1017,7 @@ export default function App() {
               )}
             </div>
           )}
+          </div>
         </section>
         <section className={`${panelSectionClassName} space-y-5`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
