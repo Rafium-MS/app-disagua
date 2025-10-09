@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist-electron",
+    "rootDir": ".",
+    "module": "ES2020",
+    "moduleResolution": "Node",
+    "declaration": false,
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true
+  },
+  "include": ["electron/**/*.ts", "src/server/**/*.ts"],
+  "exclude": ["src/renderer/**/*", "tests/**/*"]
+}

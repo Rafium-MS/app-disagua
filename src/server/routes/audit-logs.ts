@@ -3,6 +3,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 
 import { prisma } from '../prisma'
+import { insensitiveContains } from '../utils/prisma-filters'
 
 const auditLogsQuerySchema = z
   .object({
@@ -56,9 +57,9 @@ const createAuditLogsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient 
     const { entity, action, actor, from, to, page, pageSize } = parsedQuery.data
 
     const where: Prisma.AuditLogWhereInput = {
-      ...(entity ? { entity: { contains: entity, mode: 'insensitive' } } : {}),
-      ...(action ? { action: { contains: action, mode: 'insensitive' } } : {}),
-      ...(actor ? { actor: { contains: actor, mode: 'insensitive' } } : {}),
+      ...(entity ? { entity: insensitiveContains<'AuditLog'>(entity) } : {}),
+      ...(action ? { action: insensitiveContains<'AuditLog'>(action) } : {}),
+      ...(actor ? { actor: insensitiveContains<'AuditLog'>(actor) } : {}),
       ...(from || to
         ? {
             createdAt: {

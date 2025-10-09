@@ -10,6 +10,7 @@ import { z } from 'zod'
 
 import { prisma } from '../prisma'
 import { getRequestContext } from '../context'
+import { insensitiveContains } from '../utils/prisma-filters'
 
 const reportsQuerySchema = z
   .object({
@@ -510,9 +511,9 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
         ...(search
           ? {
               OR: [
-                { name: { contains: search, mode: 'insensitive' } },
+                { name: insensitiveContains<'Partner'>(search) },
                 { document: { contains: search } },
-                { email: { contains: search, mode: 'insensitive' } }
+                { email: insensitiveContains<'Partner'>(search) }
               ]
             }
           : {})

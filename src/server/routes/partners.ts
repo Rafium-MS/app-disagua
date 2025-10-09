@@ -3,6 +3,7 @@ import { Router } from 'express'
 import { z } from 'zod'
 
 import { prisma } from '../prisma'
+import { insensitiveContains } from '../utils/prisma-filters'
 
 const partnersQuerySchema = z
   .object({
@@ -26,9 +27,9 @@ const createPartnersRouter = ({ prisma: prismaClient }: { prisma: PrismaClient }
       const where = search
         ? {
             OR: [
-              { name: { contains: search, mode: 'insensitive' } },
+              { name: insensitiveContains<'Partner'>(search) },
               { document: { contains: search } },
-              { email: { contains: search, mode: 'insensitive' } }
+              { email: insensitiveContains<'Partner'>(search) }
             ]
           }
         : undefined

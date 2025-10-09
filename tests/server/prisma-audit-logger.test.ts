@@ -56,6 +56,36 @@ describe('prisma audit logger middleware', () => {
     )
   })
 
+  it.each([
+    ['createMany', { count: 2 }],
+    ['updateMany', { count: 3 }],
+    ['deleteMany', { count: 1 }]
+  ] as Array<[Prisma.MiddlewareParams['action'], unknown]>) (
+    'gera log para operações em lote %s',
+    async (action, result) => {
+      const middleware = useMiddleware.mock.calls[0][0] as Prisma.Middleware
+      const params: Prisma.MiddlewareParams = {
+        model: 'Voucher',
+        action,
+        args: { data: { redeemedAt: new Date() } }
+      }
+      const next = vi.fn().mockResolvedValue(result)
+
+      await middleware(params, next)
+
+      expect(next).toHaveBeenCalled()
+      expect(auditLogCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            action,
+            entity: 'Voucher'
+          })
+        })
+      )
+      auditLogCreate.mockClear()
+    }
+  )
+
   it('não registra logs para consultas de leitura', async () => {
     const middleware = useMiddleware.mock.calls[0][0] as Prisma.Middleware
     const params: Prisma.MiddlewareParams = {
