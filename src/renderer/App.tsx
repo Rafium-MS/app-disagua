@@ -812,30 +812,29 @@ export default function App() {
           {reportsState.status === 'success' && reportsState.data.length === 0 && (
             <p className="text-sm text-muted-foreground">Nenhum relatório disponível.</p>
           )}
-      {reportsState.status === 'success' && reportsState.data.length > 0 && (
-        <div className="grid gap-3 md:grid-cols-2">
-          {reportsState.data.map((report) => (
-            <article key={report.id} className="rounded-lg border bg-background p-4 shadow-sm">
-              <header className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {report.partner.name}
-                </p>
-                <h3 className="text-base font-semibold text-foreground">{report.title}</h3>
-              </header>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {report.summary ?? 'Sem resumo disponível.'}
-              </p>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Emitido em {formatDateTime(report.issuedAt)}
-              </p>
-            </article>
-          ))}
-        </div>
-      )}
-    </div>
-  </section>
+          {reportsState.status === 'success' && reportsState.data.length > 0 && (
+            <div className="grid gap-3 md:grid-cols-2">
+              {reportsState.data.map((report) => (
+                <article key={report.id} className="rounded-lg border bg-background p-4 shadow-sm">
+                  <header className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {report.partner.name}
+                    </p>
+                    <h3 className="text-base font-semibold text-foreground">{report.title}</h3>
+                  </header>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {report.summary ?? 'Sem resumo disponível.'}
+                  </p>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Emitido em {formatDateTime(report.issuedAt)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
 
-      <section className="space-y-4">
+        <section className="space-y-4">
         <div className="space-y-3">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
