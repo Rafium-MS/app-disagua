@@ -1,11 +1,21 @@
 import { useEffect, useState } from 'react'
+import type { LucideIcon } from 'lucide-react'
+import {
+  FileText,
+  TimerReset,
+  TicketCheck,
+  TicketPercent,
+  Users
+} from 'lucide-react'
+
 import { Button } from '@/components/ui/button'
-import { useReports } from './hooks/useReports'
+
+import { AuditLogsPanel } from './components/AuditLogsPanel'
+import { useReports, type ReportStatus } from './hooks/useReports'
 import {
   usePendingPartners,
   type PendingPartnerApiPayload as PendingPartner
 } from './hooks/usePendingPartners'
-import { AuditLogsPanel } from './components/AuditLogsPanel'
 
 type Partner = {
   id: number
@@ -321,6 +331,112 @@ function formatNumber(value: number) {
   return numberFormatter.format(value)
 }
 
+const panelSectionClassName =
+  'rounded-2xl border border-border/60 bg-background/80 p-6 shadow-sm backdrop-blur'
+
+const dashboardHighlights: Array<{
+  key: keyof DashboardStats
+  label: string
+  hint: string
+  icon: LucideIcon
+}> = [
+  {
+    key: 'partnersCount',
+    label: 'Parceiros cadastrados',
+    hint: 'Organizações ativas e prontas para receber vouchers.',
+    icon: Users
+  },
+  {
+    key: 'reportsCount',
+    label: 'Relatórios emitidos',
+    hint: 'Relatórios consolidados compartilhados recentemente.',
+    icon: FileText
+  },
+  {
+    key: 'vouchersCount',
+    label: 'Vouchers emitidos',
+    hint: 'Total de vouchers disponíveis para os parceiros.',
+    icon: TicketPercent
+  },
+  {
+    key: 'redeemedVouchersCount',
+    label: 'Vouchers resgatados',
+    hint: 'Comprovantes validados e contabilizados.',
+    icon: TicketCheck
+  },
+  {
+    key: 'pendingVouchersCount',
+    label: 'Vouchers pendentes',
+    hint: 'Itens que ainda aguardam validação ou envio.',
+    icon: TimerReset
+  }
+]
+
+function getHealthColor(status: string) {
+  const normalized = status.toLowerCase()
+  if (normalized.includes('erro') || normalized.includes('error')) {
+    return 'bg-red-500'
+  }
+
+  if (normalized.includes('ok') || normalized.includes('ativo') || normalized.includes('ready')) {
+    return 'bg-emerald-500'
+  }
+
+  return 'bg-amber-500'
+}
+
+function StatCard({
+  label,
+  value,
+  hint,
+  icon: Icon
+}: {
+  label: string
+  value: string
+  hint: string
+  icon: LucideIcon
+}) {
+  return (
+    <article className="flex flex-col justify-between rounded-xl border border-border/50 bg-background/90 p-5 shadow-sm transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-lg">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+          <p className="mt-3 text-3xl font-semibold text-foreground">{value}</p>
+        </div>
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+          <Icon className="h-5 w-5" aria-hidden />
+        </span>
+      </div>
+      <p className="mt-4 text-xs text-muted-foreground">{hint}</p>
+    </article>
+  )
+}
+
+function getReportStatusClasses(status: ReportStatus) {
+  if (status === 'aprovado') {
+    return 'bg-emerald-100 text-emerald-800 dark:bg-emerald-500/10 dark:text-emerald-300'
+  }
+
+  if (status === 'em revisão') {
+    return 'bg-amber-100 text-amber-800 dark:bg-amber-500/10 dark:text-amber-200'
+  }
+
+  return 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+}
+
+function getReportProgress(received: number, expected: number) {
+  if (expected <= 0) {
+    return 0
+  }
+
+  const progress = (received / expected) * 100
+  if (!Number.isFinite(progress)) {
+    return 0
+  }
+
+  return Math.max(0, Math.min(100, Math.round(progress)))
+}
+
 function parseStatValue(value: unknown) {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value
@@ -504,15 +620,26 @@ export default function App() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">App DisÁgua</h1>
-        <p className="text-sm text-muted-foreground">Servidor: {health}</p>
-      </header>
+    <div className="min-h-screen bg-muted/20 py-10">
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6">
+        <header className="flex flex-col gap-4 border-b border-border/60 pb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">App DisÁgua</h1>
+            <p className="max-w-2xl text-sm text-muted-foreground">
+              Acompanhe indicadores essenciais de parceiros, relatórios e vouchers em um só lugar.
+            </p>
+          </div>
+          <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/80 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground shadow-sm">
+            <span className={`h-2.5 w-2.5 rounded-full ${getHealthColor(health)} animate-pulse`} aria-hidden />
+            <span>Servidor: {health}</span>
+          </div>
+        </header>
 
-      <section className="space-y-4">
-        <div className="space-y-2">
-          <h2 className="text-lg font-semibold">Resumo geral</h2>
+        <section className={`${panelSectionClassName} space-y-5`}>
+          <div className="space-y-1">
+            <h2 className="text-lg font-semibold">Resumo geral</h2>
+            <p className="text-sm text-muted-foreground">Indicadores consolidados para orientar decisões rápidas.</p>
+          </div>
           {dashboardStatsState.status === 'loading' && (
             <p className="text-sm text-muted-foreground">Carregando resumo...</p>
           )}
@@ -520,53 +647,48 @@ export default function App() {
             <p className="text-sm text-red-600">Não foi possível carregar o resumo.</p>
           )}
           {dashboardStatsState.status === 'success' && (
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <article className="rounded-lg border bg-background p-4 shadow-sm">
-                <h3 className="text-sm font-medium text-muted-foreground">Parceiros cadastrados</h3>
-                <p className="mt-2 text-2xl font-semibold text-foreground">
-                  {formatNumber(dashboardStatsState.data.partnersCount)}
-                </p>
-              </article>
-              <article className="rounded-lg border bg-background p-4 shadow-sm">
-                <h3 className="text-sm font-medium text-muted-foreground">Relatórios emitidos</h3>
-                <p className="mt-2 text-2xl font-semibold text-foreground">
-                  {formatNumber(dashboardStatsState.data.reportsCount)}
-                </p>
-              </article>
-              <article className="rounded-lg border bg-background p-4 shadow-sm">
-                <h3 className="text-sm font-medium text-muted-foreground">Vouchers emitidos</h3>
-                <p className="mt-2 text-2xl font-semibold text-foreground">
-                  {formatNumber(dashboardStatsState.data.vouchersCount)}
-                </p>
-              </article>
-              <article className="rounded-lg border bg-background p-4 shadow-sm">
-                <h3 className="text-sm font-medium text-muted-foreground">Vouchers resgatados</h3>
-                <p className="mt-2 text-2xl font-semibold text-foreground">
-                  {formatNumber(dashboardStatsState.data.redeemedVouchersCount)}
-                </p>
-              </article>
-              <article className="rounded-lg border bg-background p-4 shadow-sm">
-                <h3 className="text-sm font-medium text-muted-foreground">Vouchers pendentes</h3>
-                <p className="mt-2 text-2xl font-semibold text-foreground">
-                  {formatNumber(dashboardStatsState.data.pendingVouchersCount)}
-                </p>
-              </article>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+              {dashboardHighlights.map((card) => (
+                <StatCard
+                  key={card.key}
+                  label={card.label}
+                  hint={card.hint}
+                  icon={card.icon}
+                  value={formatNumber(dashboardStatsState.data[card.key])}
+                />
+              ))}
             </div>
           )}
-        </div>
-      </section>
+        </section>
+        <section className={`${panelSectionClassName} space-y-5`}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Ações rápidas</h2>
+              <p className="text-sm text-muted-foreground">Facilite o dia a dia acessando os fluxos mais usados.</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm">
+                Cadastrar parceiro
+              </Button>
+              <Button type="button" variant="secondary" size="sm">
+                Novo relatório
+              </Button>
+              <Button type="button" variant="outline" size="sm">
+                Atualizar dados
+              </Button>
+            </div>
+          </div>
+        </section>
 
-      <section className="space-y-4">
-        <div className="space-x-2">
-          <Button>shadcn/ui Button</Button>
-          <Button variant="secondary">Secondary</Button>
-          <Button variant="destructive">Destructive</Button>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <h2 className="text-lg font-semibold">Parceiros cadastrados</h2>
-            <div className="w-full sm:w-64">
+        <section className={`${panelSectionClassName} space-y-5`}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Parceiros cadastrados</h2>
+              <p className="text-sm text-muted-foreground">
+                Pesquise por nome, documento ou email para localizar parceiros rapidamente.
+              </p>
+            </div>
+            <div className="w-full sm:w-72">
               <label htmlFor="partners-search" className="sr-only">
                 Buscar parceiros
               </label>
@@ -617,14 +739,16 @@ export default function App() {
               </table>
             </div>
           )}
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div className="space-y-3">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <h2 className="text-lg font-semibold">Relatórios recentes</h2>
-            <div className="w-full sm:w-64">
+        </section>
+        <section className={`${panelSectionClassName} space-y-5`}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Relatórios recentes</h2>
+              <p className="text-sm text-muted-foreground">
+                Visualize os relatórios consolidados e o andamento das entregas.
+              </p>
+            </div>
+            <div className="w-full sm:w-72">
               <label htmlFor="reports-partner" className="sr-only">
                 Filtrar relatórios por parceiro
               </label>
@@ -666,31 +790,55 @@ export default function App() {
           {reportsState.status === 'success' && reportsState.data.length === 0 && (
             <p className="text-sm text-muted-foreground">Nenhum relatório disponível.</p>
           )}
-      {reportsState.status === 'success' && reportsState.data.length > 0 && (
-        <div className="grid gap-3 md:grid-cols-2">
-          {reportsState.data.map((report) => (
-            <article key={report.id} className="rounded-lg border bg-background p-4 shadow-sm">
-              <header className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {report.partner.name}
-                </p>
-                <h3 className="text-base font-semibold text-foreground">{report.title}</h3>
-              </header>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {report.summary ?? 'Sem resumo disponível.'}
-              </p>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Emitido em {formatDateTime(report.issuedAt)}
-              </p>
-            </article>
-          ))}
-        </div>
-      )}
-    </div>
-  </section>
+          {reportsState.status === 'success' && reportsState.data.length > 0 && (
+            <div className="grid gap-4 md:grid-cols-2">
+              {reportsState.data.map((report) => {
+                const progress = getReportProgress(report.receivedDeliveries, report.expectedDeliveries)
 
-      <section className="space-y-4">
-        <div className="space-y-3">
+                return (
+                  <article
+                    key={report.id}
+                    className="flex h-full flex-col justify-between rounded-xl border border-border/60 bg-background/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                          {report.referenceLabel}
+                        </p>
+                        <h3 className="text-base font-semibold text-foreground">{report.title}</h3>
+                        <p className="text-xs text-muted-foreground">Parceiro: {report.partner.name}</p>
+                      </div>
+                      <span className={`rounded-full px-3 py-1 text-xs font-medium ${getReportStatusClasses(report.status)}`}>
+                        {report.status}
+                      </span>
+                    </div>
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      {report.summary ?? 'Sem resumo disponível.'}
+                    </p>
+                    <div className="mt-4 space-y-2">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>Progresso</span>
+                        <span>
+                          {report.receivedDeliveries}/{report.expectedDeliveries}
+                        </span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${progress}%` }}
+                        />
+                      </div>
+                    </div>
+                    <p className="mt-4 text-xs text-muted-foreground">
+                      Emitido em {formatDateTime(report.issuedAt)}
+                    </p>
+                  </article>
+                )
+              })}
+            </div>
+          )}
+        </section>
+        <section className={`${panelSectionClassName} space-y-5`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Exportar comprovantes de relatório</h2>
@@ -771,7 +919,7 @@ export default function App() {
             <p className="text-sm text-red-600">{reportExportError}</p>
           )}
           {reportExportState === 'success' && reportExportResult && (
-            <div className="space-y-4 rounded-md border bg-background p-4">
+            <div className="space-y-4 rounded-xl border border-border/60 bg-background/90 p-5 shadow-sm">
               <div>
                 <p className="text-sm font-medium text-foreground">{reportExportResult.report.title}</p>
                 <p className="text-xs text-muted-foreground">
@@ -805,7 +953,7 @@ export default function App() {
                   Nenhum comprovante foi incluído no arquivo gerado.
                 </p>
               ) : (
-                <div className="overflow-x-auto rounded-md border">
+                <div className="overflow-x-auto rounded-lg border border-border/60">
                   <table className="min-w-full divide-y divide-border text-sm">
                     <thead className="bg-muted/50">
                       <tr>
@@ -851,11 +999,8 @@ export default function App() {
               )}
             </div>
           )}
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div className="space-y-3">
+        </section>
+        <section className={`${panelSectionClassName} space-y-5`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold">Parceiros pendentes</h2>
@@ -934,7 +1079,7 @@ export default function App() {
             <p className="text-sm text-muted-foreground">Nenhum parceiro pendente encontrado para este relatório.</p>
           )}
           {pendingPartnersState.status === 'success' && pendingPartnersState.data.length > 0 && (
-            <div className="overflow-x-auto rounded-md border">
+            <div className="overflow-x-auto rounded-lg border border-border/60">
               <table className="min-w-full divide-y divide-border text-sm">
                 <thead className="bg-muted/50">
                   <tr>
@@ -1012,13 +1157,15 @@ export default function App() {
               </div>
             </div>
           )}
-        </div>
-      </section>
-
-      <section className="space-y-4">
-        <div className="space-y-3">
+        </section>
+        <section className={`${panelSectionClassName} space-y-5`}>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <h2 className="text-lg font-semibold">Vouchers emitidos</h2>
+            <div>
+              <h2 className="text-lg font-semibold">Vouchers emitidos</h2>
+              <p className="text-sm text-muted-foreground">
+                Acompanhe os vouchers gerados, o status de resgate e os relacionamentos com parceiros.
+              </p>
+            </div>
             <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-end">
               <div className="w-full sm:w-48">
                 <label htmlFor="vouchers-report" className="sr-only">
@@ -1117,7 +1264,7 @@ export default function App() {
             <p className="text-sm text-muted-foreground">Nenhum voucher disponível.</p>
           )}
           {vouchersState.status === 'success' && vouchersState.data.length > 0 && (
-            <div className="overflow-x-auto rounded-md border">
+            <div className="overflow-x-auto rounded-lg border border-border/60">
               <table className="min-w-full divide-y divide-border text-sm">
                 <thead className="bg-muted/50">
                   <tr>
@@ -1158,10 +1305,10 @@ export default function App() {
               </table>
             </div>
           )}
-        </div>
-      </section>
+        </section>
 
-      <AuditLogsPanel />
+        <AuditLogsPanel />
+      </main>
     </div>
   )
 }
