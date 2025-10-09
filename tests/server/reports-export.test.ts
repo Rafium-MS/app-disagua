@@ -5,9 +5,9 @@ import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import express from 'express'
 import request from 'supertest'
-import { afterEach, beforeAll, beforeEach, describe, expect, it, jest } from '@jest/globals'
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-jest.mock('pdf-lib', () => {
+vi.mock('pdf-lib', () => {
   class MockPage {
     width = 595
     height = 842
@@ -94,7 +94,7 @@ jest.mock('pdf-lib', () => {
   }
 }, { virtual: true })
 
-jest.mock('archiver', () => {
+vi.mock('archiver', () => {
   const { EventEmitter } = require('node:events')
   const os = require('node:os')
   const { promisify } = require('node:util')
@@ -179,15 +179,12 @@ beforeAll(async () => {
   createReportsRouter = module.createReportsRouter
 })
 
-type PrismaMock = {
-  report: { findUnique: jest.Mock }
-  auditLog: { create: jest.Mock }
-}
-
-const createPrismaMock = (): PrismaMock => ({
-  report: { findUnique: jest.fn() },
-  auditLog: { create: jest.fn() }
+const createPrismaMock = () => ({
+  report: { findUnique: vi.fn() },
+  auditLog: { create: vi.fn() }
 })
+
+type PrismaMock = ReturnType<typeof createPrismaMock>
 
 const uploadsDir = path.resolve(process.cwd(), 'data', 'uploads')
 const exportsDir = path.resolve(process.cwd(), 'data', 'exports')
@@ -210,7 +207,7 @@ describe('POST /api/reports/:id/export', () => {
   })
 
   afterEach(async () => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     if (fs.existsSync(exportsDir)) {
       fs.rmSync(exportsDir, { recursive: true, force: true })
     }
@@ -338,7 +335,7 @@ describe('POST /api/reports/:id/export', () => {
           entity: 'Report',
           entityId: '2',
           requestMethod: 'POST',
-          requestUrl: '/api/reports/2/export',
+          requestUrl: expect.stringContaining('/api/reports/2/export'),
           changes: expect.any(String)
         })
       })

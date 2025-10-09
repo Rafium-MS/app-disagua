@@ -1,17 +1,17 @@
 import type { Prisma, PrismaClient } from '@prisma/client'
-import { beforeEach, describe, expect, it, jest } from '@jest/globals'
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 
 import { registerPrismaAuditLogger } from '../../src/server/middleware/prisma-audit-logger'
 import { runWithRequestContext, type RequestContext } from '../../src/server/context'
 
 describe('prisma audit logger middleware', () => {
-  let auditLogCreate: jest.Mock
-  let useMiddleware: jest.Mock
+  let auditLogCreate: Mock
+  let useMiddleware: Mock
   let prismaMock: PrismaClient
 
   beforeEach(() => {
-    auditLogCreate = jest.fn().mockResolvedValue(undefined)
-    useMiddleware = jest.fn()
+    auditLogCreate = vi.fn().mockResolvedValue(undefined)
+    useMiddleware = vi.fn()
     prismaMock = {
       auditLog: { create: auditLogCreate }
     } as unknown as PrismaClient
@@ -27,7 +27,7 @@ describe('prisma audit logger middleware', () => {
       action: 'update',
       args: { data: { name: 'Atualizado' }, where: { id: 7 } }
     }
-    const next = jest.fn().mockResolvedValue({ id: 7, name: 'Atualizado' })
+    const next = vi.fn().mockResolvedValue({ id: 7, name: 'Atualizado' })
 
     const context: RequestContext = {
       actor: 'usuario-1',
@@ -63,7 +63,7 @@ describe('prisma audit logger middleware', () => {
       action: 'findMany',
       args: {}
     }
-    const next = jest.fn().mockResolvedValue([])
+    const next = vi.fn().mockResolvedValue([])
 
     await middleware(params, next)
 
