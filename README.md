@@ -53,7 +53,7 @@ Projeto base com:
 - `GET /partners` → lista parceiros cadastrados ordenados por nome (aceita `?search=` para filtrar por nome, documento ou email).
 - `GET /reports` → lista relatórios com parceiro associado e data de emissão (aceita `?partnerId=` para filtrar por parceiro).
 - `GET /vouchers` → lista vouchers emitidos, com parceiro relacionado e status de resgate (aceita `?status=pending|redeemed`, `?partnerId=` para filtrar por parceiro e `?reportId=` para filtrar por relatório).
-- `POST /reports/:id/export` → gera um arquivo consolidado (PDF ou ZIP) com os comprovantes do relatório informado e retorna o caminho gerado.
+- `POST /reports/:id/export` → gera um arquivo consolidado (PDF ou ZIP) com os comprovantes do relatório informado, registra o evento na auditoria e retorna o caminho gerado.
 - `GET /stats` → retorna contagens de parceiros, relatórios e vouchers (resgatados e pendentes).
 - `GET /audit-logs` → consulta o histórico de auditoria com filtros opcionais (`entity`, `action`, `actor`, `from`, `to`, `page`, `pageSize`).
 
