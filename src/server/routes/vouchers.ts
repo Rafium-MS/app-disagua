@@ -11,6 +11,7 @@ import { prisma } from '../prisma'
 const vouchersQuerySchema = z
   .object({
     partnerId: z.coerce.number().int().positive().optional(),
+    reportId: z.coerce.number().int().positive().optional(),
     status: z.enum(['redeemed', 'pending']).optional(),
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(10)
@@ -65,10 +66,11 @@ const createVouchersRouter = ({ prisma: prismaClient }: { prisma: PrismaClient }
 
   vouchersRouter.get('/', async (req, res) => {
     try {
-      const { partnerId, status, page, pageSize } = vouchersQuerySchema.parse(req.query)
+      const { partnerId, reportId, status, page, pageSize } = vouchersQuerySchema.parse(req.query)
 
       const where: Prisma.VoucherWhereInput = {
         ...(typeof partnerId === 'number' ? { partnerId } : {}),
+        ...(typeof reportId === 'number' ? { reportId } : {}),
         ...(status === 'redeemed'
           ? { redeemedAt: { not: null } }
           : status === 'pending'
