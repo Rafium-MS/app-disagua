@@ -181,10 +181,12 @@ beforeAll(async () => {
 
 type PrismaMock = {
   report: { findUnique: jest.Mock }
+  auditLog: { create: jest.Mock }
 }
 
 const createPrismaMock = (): PrismaMock => ({
-  report: { findUnique: jest.fn() }
+  report: { findUnique: jest.fn() },
+  auditLog: { create: jest.fn() }
 })
 
 const uploadsDir = path.resolve(process.cwd(), 'data', 'uploads')
@@ -264,6 +266,35 @@ describe('POST /api/reports/:id/export', () => {
     const generatedPath = path.resolve(process.cwd(), response.body.data.file.path)
     expect(fs.existsSync(generatedPath)).toBe(true)
     tempFiles.push(generatedPath)
+
+    expect(prismaMock.auditLog.create).toHaveBeenCalledTimes(1)
+    const auditPayload = prismaMock.auditLog.create.mock.calls[0][0]
+    expect(auditPayload).toEqual(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'export',
+          entity: 'Report',
+          entityId: '1',
+          requestMethod: 'POST',
+          requestUrl: '/api/reports/1/export',
+          actor: null,
+          requestId: null,
+          ipAddress: null,
+          changes: expect.any(String)
+        })
+      })
+    )
+
+    const changes = JSON.parse(auditPayload.data.changes as string)
+    expect(changes).toEqual(
+      expect.objectContaining({
+        reportTitle: 'Relatório Março',
+        format: 'pdf',
+        filePath: response.body.data.file.path,
+        counts: expect.objectContaining({ included: 1, totalVouchers: 1 }),
+        summary: [expect.objectContaining({ voucherId: 10, status: 'included' })]
+      })
+    )
   })
 
   it('gera um pacote ZIP com os comprovantes quando solicitado', async () => {
@@ -297,6 +328,31 @@ describe('POST /api/reports/:id/export', () => {
     const generatedPath = path.resolve(process.cwd(), response.body.data.file.path)
     expect(fs.existsSync(generatedPath)).toBe(true)
     tempFiles.push(generatedPath)
+
+    expect(prismaMock.auditLog.create).toHaveBeenCalledTimes(1)
+    const auditPayload = prismaMock.auditLog.create.mock.calls[0][0]
+    expect(auditPayload).toEqual(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          action: 'export',
+          entity: 'Report',
+          entityId: '2',
+          requestMethod: 'POST',
+          requestUrl: '/api/reports/2/export',
+          changes: expect.any(String)
+        })
+      })
+    )
+
+    const changes = JSON.parse(auditPayload.data.changes as string)
+    expect(changes).toEqual(
+      expect.objectContaining({
+        format: 'zip',
+        filePath: response.body.data.file.path,
+        counts: expect.objectContaining({ included: 1, totalVouchers: 1 }),
+        summary: [expect.objectContaining({ voucherId: 20, status: 'included' })]
+      })
+    )
   })
 
   it('retorna 404 quando o relatório não existe', async () => {
@@ -306,6 +362,7 @@ describe('POST /api/reports/:id/export', () => {
 
     expect(response.status).toBe(404)
     expect(response.body).toEqual({ error: 'Relatório não encontrado' })
+    expect(prismaMock.auditLog.create).not.toHaveBeenCalled()
   })
 
   it('retorna 400 quando não há comprovantes disponíveis', async () => {
@@ -330,5 +387,6 @@ describe('POST /api/reports/:id/export', () => {
 
     expect(response.status).toBe(400)
     expect(response.body).toEqual({ error: 'Nenhum comprovante disponível para exportação' })
+    expect(prismaMock.auditLog.create).not.toHaveBeenCalled()
   })
 })

@@ -3,11 +3,13 @@ import archiver from 'archiver'
 import fs from 'node:fs'
 import { promises as fsPromises } from 'node:fs'
 import path from 'node:path'
+import type { Request } from 'express'
 import { Router } from 'express'
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from 'pdf-lib'
 import { z } from 'zod'
 
 import { prisma } from '../prisma'
+import { getRequestContext } from '../context'
 
 const reportsQuerySchema = z
   .object({
@@ -390,6 +392,47 @@ const pendingPartnersQuerySchema = z
 const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient }) => {
   const reportsRouter = Router()
 
+  const registerExportAuditLog = async (
+    req: Request,
+    report: { id: number; title: string },
+    payload: {
+      format: 'pdf' | 'zip'
+      filePath: string
+      counts: { totalVouchers: number; available: number; included: number; missing: number; unsupported: number }
+      summary: Array<{ voucherId: number; status: 'included' | 'missing' | 'unsupported'; pageStart: number | null }>
+    }
+  ) => {
+    const context = getRequestContext()
+
+    try {
+      await prismaClient.auditLog.create({
+        data: {
+          action: 'export',
+          entity: 'Report',
+          entityId: String(report.id),
+          actor: context?.actor ?? null,
+          requestId: context?.requestId ?? null,
+          requestMethod: context?.method ?? req.method,
+          requestUrl: context?.url ?? req.originalUrl,
+          ipAddress: context?.ip ?? null,
+          changes: JSON.stringify({
+            reportTitle: report.title,
+            format: payload.format,
+            filePath: payload.filePath,
+            counts: payload.counts,
+            summary: payload.summary.map(entry => ({
+              voucherId: entry.voucherId,
+              status: entry.status,
+              pageStart: entry.pageStart
+            }))
+          })
+        }
+      })
+    } catch (error) {
+      console.error('Erro ao registrar log de exportação de relatório', error)
+    }
+  }
+
   reportsRouter.get('/', async (req, res) => {
     try {
       const { partnerId, page, pageSize } = reportsQuerySchema.parse(req.query)
@@ -615,6 +658,23 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
         const includedCount = summaryEntries.filter(entry => entry.status === 'included').length
         const missingCount = summaryEntries.filter(entry => entry.status === 'missing').length
 
+        await registerExportAuditLog(req, report, {
+          format: 'zip',
+          filePath: relativePath,
+          counts: {
+            totalVouchers: report.vouchers.length,
+            available: report.vouchers.length - missingCount,
+            included: includedCount,
+            missing: missingCount,
+            unsupported: 0
+          },
+          summary: summaryEntries.map(entry => ({
+            voucherId: entry.voucher.id,
+            status: entry.status,
+            pageStart: entry.pageStart ?? null
+          }))
+        })
+
         res.json({
           message: 'Exportação gerada com sucesso',
           data: {
@@ -665,6 +725,23 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
       const includedCount = pdfResult.summaries.filter(entry => entry.status === 'included').length
       const missingCount = pdfResult.summaries.filter(entry => entry.status === 'missing').length
       const unsupportedCount = pdfResult.summaries.filter(entry => entry.status === 'unsupported').length
+
+      await registerExportAuditLog(req, report, {
+        format: 'pdf',
+        filePath: relativePath,
+        counts: {
+          totalVouchers: report.vouchers.length,
+          available: report.vouchers.length - missingCount,
+          included: includedCount,
+          missing: missingCount,
+          unsupported: unsupportedCount
+        },
+        summary: pdfResult.summaries.map(entry => ({
+          voucherId: entry.voucher.id,
+          status: entry.status,
+          pageStart: entry.pageStart ?? null
+        }))
+      })
 
       res.json({
         message: 'Exportação gerada com sucesso',
