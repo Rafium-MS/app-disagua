@@ -60,7 +60,7 @@ describe('prisma audit logger middleware', () => {
     ['createMany', { count: 2 }],
     ['updateMany', { count: 3 }],
     ['deleteMany', { count: 1 }]
-  ] as Array<[Prisma.MiddlewareParams['action'], unknown]>) (
+  ] as Array<[Prisma.MiddlewareParams['action'], unknown]>)(
     'gera log para operações em lote %s',
     async (action, result) => {
       const middleware = useMiddleware.mock.calls[0][0] as Prisma.Middleware

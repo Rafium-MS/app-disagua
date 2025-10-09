@@ -49,6 +49,8 @@ prisma/*.sqlite
 # Data directories
 data/uploads/
 data/exports/
+!data/uploads/.gitkeep
+!data/exports/.gitkeep
 
 # Misc
 *.local

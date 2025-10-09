@@ -22,4 +22,3 @@ describe('App', () => {
     expect(markup).toContain('Carregando vouchers...')
   })
 })
-

@@ -78,10 +78,7 @@ const toFieldErrors = (issues: z.ZodIssue[]): FieldErrors => {
   return errors as FieldErrors
 }
 
-const applyNativeValidation = (
-  errors: FieldErrors,
-  options: ResolverOptions<FieldValues>
-) => {
+const applyNativeValidation = (errors: FieldErrors, options: ResolverOptions<FieldValues>) => {
   Object.entries(options.fields ?? {}).forEach(([name, field]) => {
     const error = getFromPath(errors as ErrorMap, name)
     const ref = field && 'ref' in field ? field.ref : undefined

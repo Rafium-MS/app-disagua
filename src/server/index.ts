@@ -8,4 +8,3 @@ const server = createServer(app)
 server.listen(port, () => {
   console.log(`Servidor Express rodando em http://localhost:${port}`)
 })
-

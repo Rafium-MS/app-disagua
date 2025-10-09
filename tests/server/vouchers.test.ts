@@ -51,7 +51,10 @@ describe('GET /api/vouchers', () => {
     prismaMock.voucher.count.mockResolvedValue(1)
 
     const app = express()
-    app.use('/api/vouchers', createVouchersRouter({ prisma: prismaMock as unknown as PrismaClient }))
+    app.use(
+      '/api/vouchers',
+      createVouchersRouter({ prisma: prismaMock as unknown as PrismaClient })
+    )
 
     const response = await request(app)
       .get('/api/vouchers')
@@ -96,7 +99,10 @@ describe('GET /api/vouchers', () => {
     prismaMock.voucher.count.mockResolvedValue(1)
 
     const app = express()
-    app.use('/api/vouchers', createVouchersRouter({ prisma: prismaMock as unknown as PrismaClient }))
+    app.use(
+      '/api/vouchers',
+      createVouchersRouter({ prisma: prismaMock as unknown as PrismaClient })
+    )
 
     const response = await request(app)
       .get('/api/vouchers')
@@ -127,7 +133,10 @@ describe('GET /api/vouchers', () => {
 
   it('retorna erro 400 para status inválido', async () => {
     const app = express()
-    app.use('/api/vouchers', createVouchersRouter({ prisma: prismaMock as unknown as PrismaClient }))
+    app.use(
+      '/api/vouchers',
+      createVouchersRouter({ prisma: prismaMock as unknown as PrismaClient })
+    )
 
     const response = await request(app).get('/api/vouchers').query({ status: 'invalid' })
 
@@ -230,4 +239,3 @@ describe('POST /api/vouchers/:id/upload', () => {
     expect(response.body).toHaveProperty('error', 'Voucher não encontrado.')
   })
 })
-

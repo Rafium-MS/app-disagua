@@ -18,7 +18,7 @@ const toSerializableValue = (value: unknown): unknown => {
   }
 
   if (Array.isArray(value)) {
-    return value.map(item => toSerializableValue(item))
+    return value.map((item) => toSerializableValue(item))
   }
 
   if (value && typeof value === 'object') {

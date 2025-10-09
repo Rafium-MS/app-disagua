@@ -25,7 +25,9 @@ describe('buildCorsOptions', () => {
       } as NodeJS.ProcessEnv
     })
 
-    await expect(execOriginCheck(corsOptions.origin!, 'https://app.example.com')).resolves.toBe(true)
+    await expect(execOriginCheck(corsOptions.origin!, 'https://app.example.com')).resolves.toBe(
+      true
+    )
     await expect(execOriginCheck(corsOptions.origin!, 'https://malicious.example')).rejects.toThrow(
       'Origin not allowed by CORS'
     )

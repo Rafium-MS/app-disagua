@@ -7,170 +7,178 @@ import express from 'express'
 import request from 'supertest'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('pdf-lib', () => {
-  class MockPage {
-    width = 595
-    height = 842
+vi.mock(
+  'pdf-lib',
+  () => {
+    class MockPage {
+      width = 595
+      height = 842
 
-    getSize() {
-      return { width: this.width, height: this.height }
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    drawText(_text: string, _options?: Record<string, unknown>) {}
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    drawImage(_image: unknown, _options?: Record<string, unknown>) {}
-  }
-
-  class MockPDFDocument {
-    pages: MockPage[] = []
-
-    static async create() {
-      return new MockPDFDocument()
-    }
-
-    static async load(_data: Uint8Array) {
-      const doc = new MockPDFDocument()
-      doc.pages.push(new MockPage())
-      return Object.assign(doc, {
-        getPageIndices: () => doc.pages.map((_, index) => index)
-      })
-    }
-
-    addPage() {
-      const page = new MockPage()
-      this.pages.push(page)
-      return page
-    }
-
-    insertPage(index: number) {
-      const page = new MockPage()
-      this.pages.splice(index, 0, page)
-      return page
-    }
-
-    getPage(index: number) {
-      return this.pages[index]
-    }
-
-    getPageCount() {
-      return this.pages.length
-    }
-
-    async copyPages(_document: MockPDFDocument, indices: number[]) {
-      return indices.map(() => new MockPage())
-    }
-
-    async embedFont(_name: string) {
-      return {}
-    }
-
-    async embedPng(_data: Uint8Array) {
-      return { width: 400, height: 300 }
-    }
-
-    async embedJpg(_data: Uint8Array) {
-      return { width: 400, height: 300 }
-    }
-
-    async save() {
-      return Buffer.from('%PDF-1.4\n%mock')
-    }
-  }
-
-  const StandardFonts = {
-    Helvetica: 'Helvetica',
-    HelveticaBold: 'Helvetica-Bold'
-  }
-
-  const rgb = (r: number, g: number, b: number) => ({ r, g, b })
-
-  return {
-    __esModule: true,
-    PDFDocument: MockPDFDocument,
-    StandardFonts,
-    rgb
-  }
-}, { virtual: true })
-
-vi.mock('archiver', () => {
-  const { EventEmitter } = require('node:events')
-  const os = require('node:os')
-  const { promisify } = require('node:util')
-  const { execFile } = require('node:child_process')
-  const execFileAsync = promisify(execFile)
-
-  class MockArchiver extends EventEmitter {
-    constructor() {
-      super()
-      this.entries = []
-      this.output = null
-    }
-
-    entries: { type: 'file' | 'data'; name: string; value: string | Buffer }[]
-    output: fs.WriteStream | null
-
-    pipe(stream: fs.WriteStream) {
-      this.output = stream
-    }
-
-    file(filePath: string, options: { name: string }) {
-      const data = fs.readFileSync(filePath)
-      this.entries.push({ type: 'file', name: options.name, value: data })
-    }
-
-    append(data: string | Buffer, options: { name: string }) {
-      const buffer = typeof data === 'string' ? Buffer.from(data) : data
-      this.entries.push({ type: 'data', name: options.name, value: buffer })
-    }
-
-    async finalize() {
-      if (!this.output) {
-        throw new Error('Output stream not configured')
+      getSize() {
+        return { width: this.width, height: this.height }
       }
 
-      const tmpDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'archiver-mock-'))
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      drawText(_text: string, _options?: Record<string, unknown>) {}
 
-      try {
-        for (const entry of this.entries) {
-          const destination = path.join(tmpDir, entry.name)
-          await fsPromises.mkdir(path.dirname(destination), { recursive: true })
-          await fsPromises.writeFile(destination, entry.value)
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      drawImage(_image: unknown, _options?: Record<string, unknown>) {}
+    }
+
+    class MockPDFDocument {
+      pages: MockPage[] = []
+
+      static async create() {
+        return new MockPDFDocument()
+      }
+
+      static async load(_data: Uint8Array) {
+        const doc = new MockPDFDocument()
+        doc.pages.push(new MockPage())
+        return Object.assign(doc, {
+          getPageIndices: () => doc.pages.map((_, index) => index)
+        })
+      }
+
+      addPage() {
+        const page = new MockPage()
+        this.pages.push(page)
+        return page
+      }
+
+      insertPage(index: number) {
+        const page = new MockPage()
+        this.pages.splice(index, 0, page)
+        return page
+      }
+
+      getPage(index: number) {
+        return this.pages[index]
+      }
+
+      getPageCount() {
+        return this.pages.length
+      }
+
+      async copyPages(_document: MockPDFDocument, indices: number[]) {
+        return indices.map(() => new MockPage())
+      }
+
+      async embedFont(_name: string) {
+        return {}
+      }
+
+      async embedPng(_data: Uint8Array) {
+        return { width: 400, height: 300 }
+      }
+
+      async embedJpg(_data: Uint8Array) {
+        return { width: 400, height: 300 }
+      }
+
+      async save() {
+        return Buffer.from('%PDF-1.4\n%mock')
+      }
+    }
+
+    const StandardFonts = {
+      Helvetica: 'Helvetica',
+      HelveticaBold: 'Helvetica-Bold'
+    }
+
+    const rgb = (r: number, g: number, b: number) => ({ r, g, b })
+
+    return {
+      __esModule: true,
+      PDFDocument: MockPDFDocument,
+      StandardFonts,
+      rgb
+    }
+  },
+  { virtual: true }
+)
+
+vi.mock(
+  'archiver',
+  () => {
+    const { EventEmitter } = require('node:events')
+    const os = require('node:os')
+    const { promisify } = require('node:util')
+    const { execFile } = require('node:child_process')
+    const execFileAsync = promisify(execFile)
+
+    class MockArchiver extends EventEmitter {
+      constructor() {
+        super()
+        this.entries = []
+        this.output = null
+      }
+
+      entries: { type: 'file' | 'data'; name: string; value: string | Buffer }[]
+      output: fs.WriteStream | null
+
+      pipe(stream: fs.WriteStream) {
+        this.output = stream
+      }
+
+      file(filePath: string, options: { name: string }) {
+        const data = fs.readFileSync(filePath)
+        this.entries.push({ type: 'file', name: options.name, value: data })
+      }
+
+      append(data: string | Buffer, options: { name: string }) {
+        const buffer = typeof data === 'string' ? Buffer.from(data) : data
+        this.entries.push({ type: 'data', name: options.name, value: buffer })
+      }
+
+      async finalize() {
+        if (!this.output) {
+          throw new Error('Output stream not configured')
         }
 
-        const zipPath = path.join(tmpDir, 'archive.zip')
-        await execFileAsync('zip', ['-r', zipPath, '.'], { cwd: tmpDir })
+        const tmpDir = await fsPromises.mkdtemp(path.join(os.tmpdir(), 'archiver-mock-'))
 
-        const zipBuffer = await fsPromises.readFile(zipPath)
+        try {
+          for (const entry of this.entries) {
+            const destination = path.join(tmpDir, entry.name)
+            await fsPromises.mkdir(path.dirname(destination), { recursive: true })
+            await fsPromises.writeFile(destination, entry.value)
+          }
 
-        await new Promise<void>((resolve, reject) => {
-          this.output!.write(zipBuffer, error => {
-            if (error) {
-              this.emit('error', error)
-              reject(error)
-              return
-            }
+          const zipPath = path.join(tmpDir, 'archive.zip')
+          await execFileAsync('zip', ['-r', zipPath, '.'], { cwd: tmpDir })
 
-            this.output!.end(() => resolve())
+          const zipBuffer = await fsPromises.readFile(zipPath)
+
+          await new Promise<void>((resolve, reject) => {
+            this.output!.write(zipBuffer, (error) => {
+              if (error) {
+                this.emit('error', error)
+                reject(error)
+                return
+              }
+
+              this.output!.end(() => resolve())
+            })
           })
-        })
-      } catch (error) {
-        this.emit('error', error)
-        throw error
-      } finally {
-        await fsPromises.rm(tmpDir, { recursive: true, force: true })
+        } catch (error) {
+          this.emit('error', error)
+          throw error
+        } finally {
+          await fsPromises.rm(tmpDir, { recursive: true, force: true })
+        }
       }
     }
-  }
 
-  const factory = () => new MockArchiver()
+    const factory = () => new MockArchiver()
 
-  return {
-    __esModule: true,
-    default: factory
-  }
-}, { virtual: true })
+    return {
+      __esModule: true,
+      default: factory
+    }
+  },
+  { virtual: true }
+)
 
 let createReportsRouter: typeof import('../../src/server/routes/reports').createReportsRouter
 
@@ -222,7 +230,8 @@ describe('POST /api/reports/:id/export', () => {
   const createSampleVoucherFile = async () => {
     const fileName = `${randomUUID()}.png`
     const filePath = path.join(uploadsDir, fileName)
-    const pngBase64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII='
+    const pngBase64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAAWgmWQ0AAAAASUVORK5CYII='
     await fsPromises.writeFile(filePath, Buffer.from(pngBase64, 'base64'))
     tempFiles.push(filePath)
     return path.posix.join('data', 'uploads', fileName)

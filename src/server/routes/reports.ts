@@ -73,12 +73,15 @@ const ensureExportsDirectory = async () => {
   await fsPromises.mkdir(exportsDirectory, { recursive: true })
 }
 
-const resolveFilePath = (relativePath: string) =>
-  path.resolve(process.cwd(), relativePath)
+const resolveFilePath = (relativePath: string) => path.resolve(process.cwd(), relativePath)
 
-const buildExportFileName = (partnerName: string, reportTitle: string, extension: 'pdf' | 'zip') => {
+const buildExportFileName = (
+  partnerName: string,
+  reportTitle: string,
+  extension: 'pdf' | 'zip'
+) => {
   const baseSlug = [partnerName, reportTitle]
-    .map(value => slugify(value))
+    .map((value) => slugify(value))
     .filter(Boolean)
     .join('-')
 
@@ -188,7 +191,7 @@ const drawCoverPage = (
   ]
 
   let y = height - 160
-  details.forEach(detail => {
+  details.forEach((detail) => {
     page.drawText(detail, {
       x: 50,
       y,
@@ -230,7 +233,7 @@ const addVoucherToPdf = async (
     const voucherPdfBytes = await fsPromises.readFile(absoluteFilePath)
     const voucherPdf = await PDFDocument.load(voucherPdfBytes)
     const copiedPages = await pdfDoc.copyPages(voucherPdf, voucherPdf.getPageIndices())
-    copiedPages.forEach(page => {
+    copiedPages.forEach((page) => {
       pdfDoc.addPage(page)
     })
     return true
@@ -275,7 +278,11 @@ const addVoucherToPdf = async (
 
 const generatePdfExport = async (
   report: ReportExportData,
-  attachments: { voucher: VoucherWithFile; status: 'available' | 'missing'; absolutePath?: string }[]
+  attachments: {
+    voucher: VoucherWithFile
+    status: 'available' | 'missing'
+    absolutePath?: string
+  }[]
 ) => {
   const pdfDoc = await PDFDocument.create()
   const regularFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
@@ -309,10 +316,8 @@ const generatePdfExport = async (
   const summaryPageIndex = 1
   pdfDoc.insertPage(summaryPageIndex)
 
-  const adjustedSummaries = summaries.map(entry =>
-    entry.pageStart
-      ? { ...entry, pageStart: entry.pageStart + 2 }
-      : entry
+  const adjustedSummaries = summaries.map((entry) =>
+    entry.pageStart ? { ...entry, pageStart: entry.pageStart + 2 } : entry
   )
 
   drawCoverPage(coverPage, report, report.vouchers.length, includedCount, regularFont, boldFont)
@@ -325,14 +330,18 @@ const generatePdfExport = async (
 
 const generateZipExport = async (
   report: ReportExportData,
-  attachments: { voucher: VoucherWithFile; status: 'available' | 'missing'; absolutePath?: string }[],
+  attachments: {
+    voucher: VoucherWithFile
+    status: 'available' | 'missing'
+    absolutePath?: string
+  }[],
   outputPath: string
 ): Promise<VoucherSummaryEntry[]> => {
   const archive = archiver('zip', { zlib: { level: 9 } })
   const output = fs.createWriteStream(outputPath)
 
-  const manifest = report.vouchers.map(voucher => {
-    const attachment = attachments.find(item => item.voucher.id === voucher.id)
+  const manifest = report.vouchers.map((voucher) => {
+    const attachment = attachments.find((item) => item.voucher.id === voucher.id)
 
     return {
       id: voucher.id,
@@ -346,7 +355,7 @@ const generateZipExport = async (
 
   const finalizePromise = new Promise<void>((resolve, reject) => {
     output.on('close', () => resolve())
-    archive.on('error', error => reject(error))
+    archive.on('error', (error) => reject(error))
   })
 
   archive.pipe(output)
@@ -358,20 +367,27 @@ const generateZipExport = async (
     }
   }
 
-  archive.append(JSON.stringify({
-    report: {
-      id: report.id,
-      title: report.title,
-      issuedAt: report.issuedAt.toISOString(),
-      partner: report.partner.name
-    },
-    vouchers: manifest
-  }, null, 2), { name: 'manifest.json' })
+  archive.append(
+    JSON.stringify(
+      {
+        report: {
+          id: report.id,
+          title: report.title,
+          issuedAt: report.issuedAt.toISOString(),
+          partner: report.partner.name
+        },
+        vouchers: manifest
+      },
+      null,
+      2
+    ),
+    { name: 'manifest.json' }
+  )
 
   await archive.finalize()
   await finalizePromise
 
-  return attachments.map(attachment =>
+  return attachments.map((attachment) =>
     attachment.status === 'available' && attachment.absolutePath
       ? { voucher: attachment.voucher, status: 'included' as const }
       : { voucher: attachment.voucher, status: 'missing' as const }
@@ -383,7 +399,7 @@ const pendingPartnersQuerySchema = z
     search: z
       .string()
       .trim()
-      .transform(value => (value.length > 0 ? value : undefined))
+      .transform((value) => (value.length > 0 ? value : undefined))
       .optional(),
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(10)
@@ -399,8 +415,18 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
     payload: {
       format: 'pdf' | 'zip'
       filePath: string
-      counts: { totalVouchers: number; available: number; included: number; missing: number; unsupported: number }
-      summary: Array<{ voucherId: number; status: 'included' | 'missing' | 'unsupported'; pageStart: number | null }>
+      counts: {
+        totalVouchers: number
+        available: number
+        included: number
+        missing: number
+        unsupported: number
+      }
+      summary: Array<{
+        voucherId: number
+        status: 'included' | 'missing' | 'unsupported'
+        pageStart: number | null
+      }>
     }
   ) => {
     const context = getRequestContext()
@@ -421,7 +447,7 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
             format: payload.format,
             filePath: payload.filePath,
             counts: payload.counts,
-            summary: payload.summary.map(entry => ({
+            summary: payload.summary.map((entry) => ({
               voucherId: entry.voucherId,
               status: entry.status,
               pageStart: entry.pageStart
@@ -546,10 +572,10 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
         prismaClient.partner.count({ where })
       ])
 
-      const data = partners.map(partner => {
+      const data = partners.map((partner) => {
         const reportVouchers = partner.vouchers
         const totalVouchers = reportVouchers.length
-        const validVouchers = reportVouchers.filter(voucher => voucher.redeemedAt === null).length
+        const validVouchers = reportVouchers.filter((voucher) => voucher.redeemedAt === null).length
         const redeemedVouchers = totalVouchers - validVouchers
         const lastVoucherIssuedAt = reportVouchers[0]?.issuedAt ?? null
 
@@ -622,7 +648,7 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
       }
 
       const attachments = await Promise.all(
-        report.vouchers.map(async voucher => {
+        report.vouchers.map(async (voucher) => {
           if (!voucher.filePath) {
             return { voucher, status: 'missing' as const }
           }
@@ -639,7 +665,7 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
       )
 
       const availableAttachments = attachments.filter(
-        attachment => attachment.status === 'available'
+        (attachment) => attachment.status === 'available'
       )
 
       if (availableAttachments.length === 0) {
@@ -656,8 +682,8 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
 
         const summaryEntries = await generateZipExport(report, attachments, absolutePath)
 
-        const includedCount = summaryEntries.filter(entry => entry.status === 'included').length
-        const missingCount = summaryEntries.filter(entry => entry.status === 'missing').length
+        const includedCount = summaryEntries.filter((entry) => entry.status === 'included').length
+        const missingCount = summaryEntries.filter((entry) => entry.status === 'missing').length
 
         await registerExportAuditLog(req, report, {
           format: 'zip',
@@ -669,7 +695,7 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
             missing: missingCount,
             unsupported: 0
           },
-          summary: summaryEntries.map(entry => ({
+          summary: summaryEntries.map((entry) => ({
             voucherId: entry.voucher.id,
             status: entry.status,
             pageStart: entry.pageStart ?? null
@@ -694,7 +720,7 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
               missing: missingCount,
               unsupported: 0
             },
-            summary: summaryEntries.map(entry => ({
+            summary: summaryEntries.map((entry) => ({
               voucherId: entry.voucher.id,
               code: entry.voucher.code,
               issuedAt: entry.voucher.issuedAt.toISOString(),
@@ -723,9 +749,13 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
 
       await fsPromises.writeFile(absolutePath, pdfResult.bytes)
 
-      const includedCount = pdfResult.summaries.filter(entry => entry.status === 'included').length
-      const missingCount = pdfResult.summaries.filter(entry => entry.status === 'missing').length
-      const unsupportedCount = pdfResult.summaries.filter(entry => entry.status === 'unsupported').length
+      const includedCount = pdfResult.summaries.filter(
+        (entry) => entry.status === 'included'
+      ).length
+      const missingCount = pdfResult.summaries.filter((entry) => entry.status === 'missing').length
+      const unsupportedCount = pdfResult.summaries.filter(
+        (entry) => entry.status === 'unsupported'
+      ).length
 
       await registerExportAuditLog(req, report, {
         format: 'pdf',
@@ -737,7 +767,7 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
           missing: missingCount,
           unsupported: unsupportedCount
         },
-        summary: pdfResult.summaries.map(entry => ({
+        summary: pdfResult.summaries.map((entry) => ({
           voucherId: entry.voucher.id,
           status: entry.status,
           pageStart: entry.pageStart ?? null
@@ -762,7 +792,7 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
             missing: missingCount,
             unsupported: unsupportedCount
           },
-          summary: pdfResult.summaries.map(entry => ({
+          summary: pdfResult.summaries.map((entry) => ({
             voucherId: entry.voucher.id,
             code: entry.voucher.code,
             issuedAt: entry.voucher.issuedAt.toISOString(),
@@ -792,4 +822,3 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
 const reportsRouter = createReportsRouter({ prisma })
 
 export { createReportsRouter, reportsRouter }
-

@@ -83,4 +83,3 @@ const createPartnersRouter = ({ prisma: prismaClient }: { prisma: PrismaClient }
 const partnersRouter = createPartnersRouter({ prisma })
 
 export { createPartnersRouter, partnersRouter }
-

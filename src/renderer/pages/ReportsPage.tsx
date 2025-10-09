@@ -11,9 +11,9 @@ const reportSchema = z.object({
   partner: z.string().min(3, 'Selecione o parceiro responsável'),
   referenceMonth: z.string().min(7, 'Informe o mês/ano no formato MM/AAAA'),
   status: z.enum(['rascunho', 'em revisão', 'aprovado'], {
-    errorMap: () => ({ message: 'Selecione um status válido' }),
+    errorMap: () => ({ message: 'Selecione um status válido' })
   }),
-  summary: z.string().min(10, 'Inclua um resumo com ao menos 10 caracteres'),
+  summary: z.string().min(10, 'Inclua um resumo com ao menos 10 caracteres')
 })
 
 type ReportFormValues = z.infer<typeof reportSchema>
@@ -38,7 +38,7 @@ const initialReports: Report[] = [
     status: 'aprovado',
     summary: 'Relatório final com consolidação de vouchers distribuídos no trimestre.',
     createdAt: '2024-04-02T12:00:00Z',
-    updatedAt: '2024-04-10T08:32:00Z',
+    updatedAt: '2024-04-10T08:32:00Z'
   },
   {
     id: 2,
@@ -48,7 +48,7 @@ const initialReports: Report[] = [
     status: 'em revisão',
     summary: 'Revisão das notas fiscais de abastecimento e conciliação.',
     createdAt: '2024-05-05T09:10:00Z',
-    updatedAt: '2024-05-07T14:45:00Z',
+    updatedAt: '2024-05-07T14:45:00Z'
   },
   {
     id: 3,
@@ -58,8 +58,8 @@ const initialReports: Report[] = [
     status: 'rascunho',
     summary: 'Compilado inicial das visitas realizadas pelas equipes técnicas.',
     createdAt: '2024-05-12T16:10:00Z',
-    updatedAt: '2024-05-12T16:10:00Z',
-  },
+    updatedAt: '2024-05-12T16:10:00Z'
+  }
 ]
 
 type SortConfig = {
@@ -70,7 +70,7 @@ type SortConfig = {
 function formatDate(dateIso: string) {
   const formatter = new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'short',
-    timeStyle: 'short',
+    timeStyle: 'short'
   })
   return formatter.format(new Date(dateIso))
 }
@@ -78,7 +78,7 @@ function formatDate(dateIso: string) {
 const statusBadges: Record<Report['status'], string> = {
   rascunho: 'border-amber-300 bg-amber-50 text-amber-900',
   'em revisão': 'border-blue-300 bg-blue-50 text-blue-900',
-  aprovado: 'border-emerald-300 bg-emerald-50 text-emerald-900',
+  aprovado: 'border-emerald-300 bg-emerald-50 text-emerald-900'
 }
 
 export function ReportsPage() {
@@ -97,8 +97,8 @@ export function ReportsPage() {
       partner: '',
       referenceMonth: '',
       status: 'rascunho',
-      summary: '',
-    },
+      summary: ''
+    }
   })
 
   const filteredReports = useMemo(() => {
@@ -135,7 +135,7 @@ export function ReportsPage() {
       partner: report.partner,
       referenceMonth: report.referenceMonth,
       status: report.status,
-      summary: report.summary,
+      summary: report.summary
     })
     setIsDialogOpen(true)
   }
@@ -152,19 +152,19 @@ export function ReportsPage() {
       toast({
         title: 'Relatório atualizado',
         description: `${data.title} salvo com sucesso.`,
-        variant: 'success',
+        variant: 'success'
       })
     } else {
       const nextId = reports.length > 0 ? Math.max(...reports.map((report) => report.id)) + 1 : 1
       const timestamp = new Date().toISOString()
       setReports((previous) => [
         ...previous,
-        { id: nextId, ...data, createdAt: timestamp, updatedAt: timestamp },
+        { id: nextId, ...data, createdAt: timestamp, updatedAt: timestamp }
       ])
       toast({
         title: 'Relatório criado',
         description: `${data.title} foi incluído na fila de acompanhamento.`,
-        variant: 'success',
+        variant: 'success'
       })
     }
 
@@ -236,7 +236,7 @@ export function ReportsPage() {
                     { key: 'title', label: 'Título' },
                     { key: 'partner', label: 'Parceiro' },
                     { key: 'referenceMonth', label: 'Mês de referência' },
-                    { key: 'status', label: 'Status' },
+                    { key: 'status', label: 'Status' }
                   ] satisfies { key: SortConfig['column']; label: string }[]
                 ).map((column) => (
                   <th key={column.key} className="px-4 py-3 text-left font-medium">
@@ -265,11 +265,15 @@ export function ReportsPage() {
                   <td className="px-4 py-3 text-muted-foreground">{report.partner}</td>
                   <td className="px-4 py-3 text-muted-foreground">{report.referenceMonth}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${statusBadges[report.status]}`}>
+                    <span
+                      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${statusBadges[report.status]}`}
+                    >
                       {report.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatDate(report.updatedAt)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatDate(report.updatedAt)}
+                  </td>
                   <td className="px-4 py-3">
                     <Button variant="outline" size="sm" onClick={() => openEditModal(report)}>
                       Editar

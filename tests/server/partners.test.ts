@@ -26,14 +26,24 @@ describe('GET /api/partners', () => {
 
   it('retorna parceiros paginados com metadados', async () => {
     const partners = [
-      { id: 1, name: 'Parceiro A', document: '123', email: 'a@example.com', createdAt: new Date(), updatedAt: new Date() }
+      {
+        id: 1,
+        name: 'Parceiro A',
+        document: '123',
+        email: 'a@example.com',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
     ]
 
     prismaMock.partner.findMany.mockResolvedValue(partners)
     prismaMock.partner.count.mockResolvedValue(5)
 
     const app = express()
-    app.use('/api/partners', createPartnersRouter({ prisma: prismaMock as unknown as PrismaClient }))
+    app.use(
+      '/api/partners',
+      createPartnersRouter({ prisma: prismaMock as unknown as PrismaClient })
+    )
 
     const response = await request(app).get('/api/partners').query({ page: 2, pageSize: 1 })
 
@@ -68,7 +78,10 @@ describe('GET /api/partners', () => {
 
   it('retorna erro 400 quando a paginação é inválida', async () => {
     const app = express()
-    app.use('/api/partners', createPartnersRouter({ prisma: prismaMock as unknown as PrismaClient }))
+    app.use(
+      '/api/partners',
+      createPartnersRouter({ prisma: prismaMock as unknown as PrismaClient })
+    )
 
     const response = await request(app).get('/api/partners').query({ page: 0 })
 
@@ -76,4 +89,3 @@ describe('GET /api/partners', () => {
     expect(response.body).toHaveProperty('error', 'Parâmetros inválidos')
   })
 })
-

@@ -22,7 +22,11 @@ export type PendingPartnersPagination = {
 
 export type PendingPartnersState =
   | { status: 'idle'; data: []; pagination: null }
-  | { status: 'loading'; data: PendingPartnerApiPayload[]; pagination: PendingPartnersPagination | null }
+  | {
+      status: 'loading'
+      data: PendingPartnerApiPayload[]
+      pagination: PendingPartnersPagination | null
+    }
   | { status: 'success'; data: PendingPartnerApiPayload[]; pagination: PendingPartnersPagination }
   | { status: 'error'; data: []; pagination: null }
 
@@ -43,7 +47,11 @@ const defaultPagination: PendingPartnersPagination = {
 export function usePendingPartners(options: UsePendingPartnersOptions): PendingPartnersState {
   const { reportId, page = 1, pageSize = 10 } = options
   const normalizedSearch = useMemo(() => options.search?.trim() ?? '', [options.search])
-  const [state, setState] = useState<PendingPartnersState>({ status: 'idle', data: [], pagination: null })
+  const [state, setState] = useState<PendingPartnersState>({
+    status: 'idle',
+    data: [],
+    pagination: null
+  })
 
   useEffect(() => {
     if (typeof reportId !== 'number') {
@@ -54,7 +62,11 @@ export function usePendingPartners(options: UsePendingPartnersOptions): PendingP
     let canceled = false
     const controller = new AbortController()
 
-    setState(previous => ({ status: 'loading', data: previous.status === 'success' ? previous.data : [], pagination: previous.pagination }))
+    setState((previous) => ({
+      status: 'loading',
+      data: previous.status === 'success' ? previous.data : [],
+      pagination: previous.pagination
+    }))
 
     const params = new URLSearchParams()
     params.set('page', String(page))
@@ -66,13 +78,15 @@ export function usePendingPartners(options: UsePendingPartnersOptions): PendingP
     const url = `http://localhost:5174/api/reports/${reportId}/pending-partners?${params.toString()}`
 
     fetch(url, { signal: controller.signal })
-      .then(response => response.json())
-      .then(payload => {
+      .then((response) => response.json())
+      .then((payload) => {
         if (canceled) {
           return
         }
 
-        const data = Array.isArray(payload?.data) ? (payload.data as PendingPartnerApiPayload[]) : []
+        const data = Array.isArray(payload?.data)
+          ? (payload.data as PendingPartnerApiPayload[])
+          : []
         const pagination =
           typeof payload?.pagination === 'object' && payload.pagination
             ? (payload.pagination as PendingPartnersPagination)
@@ -80,12 +94,17 @@ export function usePendingPartners(options: UsePendingPartnersOptions): PendingP
 
         setState({ status: 'success', data, pagination })
       })
-      .catch(error => {
+      .catch((error) => {
         if (canceled || controller.signal.aborted) {
           return
         }
 
-        if (typeof error === 'object' && error && 'name' in error && (error as { name?: string }).name === 'AbortError') {
+        if (
+          typeof error === 'object' &&
+          error &&
+          'name' in error &&
+          (error as { name?: string }).name === 'AbortError'
+        ) {
           return
         }
 

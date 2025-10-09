@@ -104,4 +104,3 @@ Para adicionar mais componentes shadcn no futuro, você pode usar o CLI oficial 
 
 - `npm run test` executa a suíte com Vitest em modo não interativo.
 - Exemplos de testes de API estão em `tests/server/*.test.ts`.
-

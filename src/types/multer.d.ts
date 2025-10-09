@@ -19,12 +19,24 @@ declare module 'multer' {
       files?: number
       [key: string]: unknown
     }
-    fileFilter?: (req: unknown, file: MulterFile, callback: (error: unknown, acceptFile?: boolean) => void) => void
+    fileFilter?: (
+      req: unknown,
+      file: MulterFile,
+      callback: (error: unknown, acceptFile?: boolean) => void
+    ) => void
   }
 
   interface DiskStorageOptions {
-    destination?: (req: unknown, file: MulterFile, callback: (error: Error | null, destination: string) => void) => void
-    filename?: (req: unknown, file: MulterFile, callback: (error: Error | null, filename: string) => void) => void
+    destination?: (
+      req: unknown,
+      file: MulterFile,
+      callback: (error: Error | null, destination: string) => void
+    ) => void
+    filename?: (
+      req: unknown,
+      file: MulterFile,
+      callback: (error: Error | null, filename: string) => void
+    ) => void
   }
 
   interface MulterInstance {

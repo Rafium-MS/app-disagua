@@ -45,9 +45,14 @@ describe('GET /api/audit-logs', () => {
     prismaMock.auditLog.count.mockResolvedValue(1)
 
     const app = express()
-    app.use('/api/audit-logs', createAuditLogsRouter({ prisma: prismaMock as unknown as PrismaClient }))
+    app.use(
+      '/api/audit-logs',
+      createAuditLogsRouter({ prisma: prismaMock as unknown as PrismaClient })
+    )
 
-    const response = await request(app).get('/api/audit-logs').query({ entity: 'Partner', pageSize: 5 })
+    const response = await request(app)
+      .get('/api/audit-logs')
+      .query({ entity: 'Partner', pageSize: 5 })
 
     expect(response.status).toBe(200)
     expect(prismaMock.auditLog.findMany).toHaveBeenCalledWith(
@@ -68,7 +73,10 @@ describe('GET /api/audit-logs', () => {
 
   it('retorna erro 400 quando filtros são inválidos', async () => {
     const app = express()
-    app.use('/api/audit-logs', createAuditLogsRouter({ prisma: prismaMock as unknown as PrismaClient }))
+    app.use(
+      '/api/audit-logs',
+      createAuditLogsRouter({ prisma: prismaMock as unknown as PrismaClient })
+    )
 
     const response = await request(app).get('/api/audit-logs').query({ from: 'data-invalida' })
 

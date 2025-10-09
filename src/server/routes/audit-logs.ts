@@ -7,33 +7,18 @@ import { insensitiveContains } from '../utils/prisma-filters'
 
 const auditLogsQuerySchema = z
   .object({
-    entity: z
-      .string()
-      .trim()
-      .min(1)
-      .max(120)
-      .optional(),
-    action: z
-      .string()
-      .trim()
-      .min(1)
-      .max(120)
-      .optional(),
-    actor: z
-      .string()
-      .trim()
-      .min(1)
-      .max(120)
-      .optional(),
+    entity: z.string().trim().min(1).max(120).optional(),
+    action: z.string().trim().min(1).max(120).optional(),
+    actor: z.string().trim().min(1).max(120).optional(),
     from: z
       .string()
       .trim()
-      .refine(value => !Number.isNaN(Date.parse(value)), 'Data inicial inválida')
+      .refine((value) => !Number.isNaN(Date.parse(value)), 'Data inicial inválida')
       .optional(),
     to: z
       .string()
       .trim()
-      .refine(value => !Number.isNaN(Date.parse(value)), 'Data final inválida')
+      .refine((value) => !Number.isNaN(Date.parse(value)), 'Data final inválida')
       .optional(),
     page: z.coerce.number().int().min(1).default(1),
     pageSize: z.coerce.number().int().min(1).max(100).default(20)

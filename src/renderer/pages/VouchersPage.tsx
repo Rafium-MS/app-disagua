@@ -11,9 +11,9 @@ const voucherSchema = z.object({
   partner: z.string().min(3, 'Informe o parceiro responsável'),
   report: z.string().optional(),
   status: z.enum(['pendente', 'resgatado'], {
-    errorMap: () => ({ message: 'Selecione um status válido' }),
+    errorMap: () => ({ message: 'Selecione um status válido' })
   }),
-  issuedAt: z.string().min(1, 'Informe a data de emissão do voucher'),
+  issuedAt: z.string().min(1, 'Informe a data de emissão do voucher')
 })
 
 type VoucherFormValues = z.infer<typeof voucherSchema>
@@ -36,7 +36,7 @@ const initialVouchers: Voucher[] = [
     report: 'Entrega de vouchers Q1',
     status: 'resgatado',
     issuedAt: '2024-03-01T13:00:00Z',
-    redeemedAt: '2024-03-15T17:45:00Z',
+    redeemedAt: '2024-03-15T17:45:00Z'
   },
   {
     id: 2,
@@ -45,7 +45,7 @@ const initialVouchers: Voucher[] = [
     report: 'Auditoria de estoques',
     status: 'pendente',
     issuedAt: '2024-04-10T11:30:00Z',
-    redeemedAt: null,
+    redeemedAt: null
   },
   {
     id: 3,
@@ -54,8 +54,8 @@ const initialVouchers: Voucher[] = [
     report: 'Visitas de campo',
     status: 'pendente',
     issuedAt: '2024-04-22T09:20:00Z',
-    redeemedAt: null,
-  },
+    redeemedAt: null
+  }
 ]
 
 type SortConfig = {
@@ -66,7 +66,7 @@ type SortConfig = {
 function formatDate(dateIso: string) {
   const formatter = new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'short',
-    timeStyle: 'short',
+    timeStyle: 'short'
   })
   return formatter.format(new Date(dateIso))
 }
@@ -95,8 +95,8 @@ export function VouchersPage() {
       partner: '',
       report: '',
       status: 'pendente',
-      issuedAt: '',
-    },
+      issuedAt: ''
+    }
   })
 
   const filteredVouchers = useMemo(() => {
@@ -124,7 +124,10 @@ export function VouchersPage() {
     return sorted
   }, [vouchers, search, partnerFilter, statusFilter, sort])
 
-  const uniquePartners = useMemo(() => Array.from(new Set(vouchers.map((voucher) => voucher.partner))), [vouchers])
+  const uniquePartners = useMemo(
+    () => Array.from(new Set(vouchers.map((voucher) => voucher.partner))),
+    [vouchers]
+  )
 
   const openCreateModal = () => {
     setEditingVoucher(null)
@@ -139,7 +142,7 @@ export function VouchersPage() {
       partner: voucher.partner,
       report: voucher.report ?? '',
       status: voucher.status,
-      issuedAt: toLocalInputValue(voucher.issuedAt),
+      issuedAt: toLocalInputValue(voucher.issuedAt)
     })
     setIsDialogOpen(true)
   }
@@ -150,7 +153,7 @@ export function VouchersPage() {
     const redeemedAtValue =
       data.status === 'resgatado'
         ? editingVoucher?.status === 'resgatado'
-          ? editingVoucher.redeemedAt ?? new Date().toISOString()
+          ? (editingVoucher.redeemedAt ?? new Date().toISOString())
           : new Date().toISOString()
         : null
 
@@ -158,29 +161,28 @@ export function VouchersPage() {
       ...data,
       report: normalizedReport,
       issuedAt: issuedAtIso,
-      redeemedAt: redeemedAtValue,
+      redeemedAt: redeemedAtValue
     }
 
     if (editingVoucher) {
       setVouchers((previous) =>
         previous.map((voucher) =>
-          voucher.id === editingVoucher.id
-            ? { ...voucher, ...payload }
-            : voucher
+          voucher.id === editingVoucher.id ? { ...voucher, ...payload } : voucher
         )
       )
       toast({
         title: 'Voucher atualizado',
         description: `${data.code} foi salvo com sucesso.`,
-        variant: 'success',
+        variant: 'success'
       })
     } else {
-      const nextId = vouchers.length > 0 ? Math.max(...vouchers.map((voucher) => voucher.id)) + 1 : 1
+      const nextId =
+        vouchers.length > 0 ? Math.max(...vouchers.map((voucher) => voucher.id)) + 1 : 1
       setVouchers((previous) => [...previous, { id: nextId, ...payload }])
       toast({
         title: 'Voucher criado',
         description: `${data.code} foi registrado e está disponível para distribuição.`,
-        variant: 'success',
+        variant: 'success'
       })
     }
 
@@ -247,7 +249,9 @@ export function VouchersPage() {
             <select
               id="voucher-status-filter"
               value={statusFilter}
-              onChange={(event) => setStatusFilter(event.target.value as 'todos' | Voucher['status'])}
+              onChange={(event) =>
+                setStatusFilter(event.target.value as 'todos' | Voucher['status'])
+              }
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <option value="todos">Todos os status</option>
@@ -266,7 +270,7 @@ export function VouchersPage() {
                     { key: 'code', label: 'Código' },
                     { key: 'partner', label: 'Parceiro' },
                     { key: 'status', label: 'Status' },
-                    { key: 'issuedAt', label: 'Emitido em' },
+                    { key: 'issuedAt', label: 'Emitido em' }
                   ] satisfies { key: SortConfig['column']; label: string }[]
                 ).map((column) => (
                   <th key={column.key} className="px-4 py-3 text-left font-medium">
@@ -304,7 +308,9 @@ export function VouchersPage() {
                       {voucher.status}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatDate(voucher.issuedAt)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatDate(voucher.issuedAt)}
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{voucher.report ?? '—'}</td>
                   <td className="px-4 py-3">
                     <Button variant="outline" size="sm" onClick={() => openEditModal(voucher)}>

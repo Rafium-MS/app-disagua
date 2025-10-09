@@ -25,7 +25,8 @@ async function createWindow() {
   })
 
   if (isDev) {
-    const url = process.env.VITE_DEV_SERVER_URL || process.env.ELECTRON_START_URL || 'http://localhost:5173'
+    const url =
+      process.env.VITE_DEV_SERVER_URL || process.env.ELECTRON_START_URL || 'http://localhost:5173'
     await win.loadURL(url)
     win.webContents.openDevTools({ mode: 'detach' })
   } else {

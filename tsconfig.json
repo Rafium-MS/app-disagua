@@ -20,4 +20,3 @@
   },
   "include": ["electron", "src", "vite.config.ts", "vitest.config.ts"]
 }
-

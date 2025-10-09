@@ -39,7 +39,7 @@ const statusCycle: ReportStatus[] = ['aprovado', 'em revisão', 'rascunho']
 const progressBaselines: Array<{ expected: number; received: number }> = [
   { expected: 320, received: 308 },
   { expected: 180, received: 142 },
-  { expected: 120, received: 54 },
+  { expected: 120, received: 54 }
 ]
 
 const monthFormatter = new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' })
@@ -69,8 +69,8 @@ function buildReport(raw: ReportApiPayload, index: number): Report {
     receivedDeliveries: Math.max(0, received),
     period: {
       start: periodStart.toISOString(),
-      end: periodEnd.toISOString(),
-    },
+      end: periodEnd.toISOString()
+    }
   }
 }
 
@@ -79,7 +79,10 @@ function normalizePartnerId(partnerId: UseReportsOptions['partnerId']) {
 }
 
 export function useReports(options: UseReportsOptions = {}): ReportsState {
-  const normalizedPartnerId = useMemo(() => normalizePartnerId(options.partnerId), [options.partnerId])
+  const normalizedPartnerId = useMemo(
+    () => normalizePartnerId(options.partnerId),
+    [options.partnerId]
+  )
   const [state, setState] = useState<ReportsState>({ status: 'loading', data: [] })
 
   useEffect(() => {

@@ -6,4 +6,4 @@ export const insensitiveContains = <ModelName extends keyof Prisma.TypeMap['mode
   ({
     contains: value,
     mode: 'insensitive'
-  } as unknown as Prisma.StringFilter<ModelName>)
+  }) as unknown as Prisma.StringFilter<ModelName>

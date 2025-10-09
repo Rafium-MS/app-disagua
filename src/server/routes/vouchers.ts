@@ -144,7 +144,7 @@ const createVouchersRouter = ({ prisma: prismaClient }: { prisma: PrismaClient }
 
     const { id } = parsedParams.data
 
-    upload.single('file')(req, res, async error => {
+    upload.single('file')(req, res, async (error) => {
       const requestWithFile = req as Request & { file?: { filename: string } }
 
       if (error instanceof multer.MulterError) {
@@ -160,7 +160,9 @@ const createVouchersRouter = ({ prisma: prismaClient }: { prisma: PrismaClient }
       }
 
       if (error instanceof InvalidFileTypeError) {
-        res.status(400).json({ error: 'Tipo de arquivo não suportado. Envie apenas PDF, JPG ou PNG.' })
+        res
+          .status(400)
+          .json({ error: 'Tipo de arquivo não suportado. Envie apenas PDF, JPG ou PNG.' })
         return
       }
 
@@ -209,4 +211,3 @@ const createVouchersRouter = ({ prisma: prismaClient }: { prisma: PrismaClient }
 const vouchersRouter = createVouchersRouter({ prisma })
 
 export { createVouchersRouter, vouchersRouter }
-

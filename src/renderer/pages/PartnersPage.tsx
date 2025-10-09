@@ -11,7 +11,7 @@ const partnerSchema = z.object({
   document: z.string().min(5, 'Documento inválido'),
   email: z
     .string({ required_error: 'Informe o e-mail de contato' })
-    .email('Informe um e-mail válido'),
+    .email('Informe um e-mail válido')
 })
 
 type PartnerFormValues = z.infer<typeof partnerSchema>
@@ -32,7 +32,7 @@ const initialPartners: Partner[] = [
     document: '12.345.678/0001-90',
     email: 'contato@aguasdonorte.com',
     createdAt: '2024-01-12T10:24:00Z',
-    updatedAt: '2024-01-12T10:24:00Z',
+    updatedAt: '2024-01-12T10:24:00Z'
   },
   {
     id: 2,
@@ -40,7 +40,7 @@ const initialPartners: Partner[] = [
     document: '98.765.432/0001-11',
     email: 'financeiro@distribuidoracentral.com',
     createdAt: '2024-02-03T15:00:00Z',
-    updatedAt: '2024-02-15T18:32:00Z',
+    updatedAt: '2024-02-15T18:32:00Z'
   },
   {
     id: 3,
@@ -48,8 +48,8 @@ const initialPartners: Partner[] = [
     document: '23.456.789/0001-55',
     email: 'suporte@cooperativaazul.org',
     createdAt: '2024-03-21T09:10:00Z',
-    updatedAt: '2024-03-21T09:10:00Z',
-  },
+    updatedAt: '2024-03-21T09:10:00Z'
+  }
 ]
 
 type SortConfig = {
@@ -60,7 +60,7 @@ type SortConfig = {
 function formatDate(dateIso: string) {
   const formatter = new Intl.DateTimeFormat('pt-BR', {
     dateStyle: 'short',
-    timeStyle: 'short',
+    timeStyle: 'short'
   })
   return formatter.format(new Date(dateIso))
 }
@@ -75,7 +75,7 @@ export function PartnersPage() {
 
   const form = useForm<PartnerFormValues>({
     resolver: zodResolver(partnerSchema),
-    defaultValues: { name: '', document: '', email: '' },
+    defaultValues: { name: '', document: '', email: '' }
   })
 
   const filteredPartners = useMemo(() => {
@@ -124,19 +124,20 @@ export function PartnersPage() {
       toast({
         title: 'Parceiro atualizado',
         description: `${data.name} foi atualizado com sucesso.`,
-        variant: 'success',
+        variant: 'success'
       })
     } else {
-      const nextId = partners.length > 0 ? Math.max(...partners.map((partner) => partner.id)) + 1 : 1
+      const nextId =
+        partners.length > 0 ? Math.max(...partners.map((partner) => partner.id)) + 1 : 1
       const timestamp = new Date().toISOString()
       setPartners((previous) => [
         ...previous,
-        { id: nextId, ...data, createdAt: timestamp, updatedAt: timestamp },
+        { id: nextId, ...data, createdAt: timestamp, updatedAt: timestamp }
       ])
       toast({
         title: 'Parceiro criado',
         description: `${data.name} foi adicionado à base.`,
-        variant: 'success',
+        variant: 'success'
       })
     }
 
@@ -189,7 +190,7 @@ export function PartnersPage() {
                     { key: 'name', label: 'Nome' },
                     { key: 'document', label: 'Documento' },
                     { key: 'email', label: 'E-mail' },
-                    { key: 'createdAt', label: 'Criado em' },
+                    { key: 'createdAt', label: 'Criado em' }
                   ] satisfies { key: SortConfig['column']; label: string }[]
                 ).map((column) => (
                   <th key={column.key} className="px-4 py-3 text-left font-medium">
@@ -216,7 +217,9 @@ export function PartnersPage() {
                   <td className="px-4 py-3 font-medium text-foreground">{partner.name}</td>
                   <td className="px-4 py-3 text-muted-foreground">{partner.document}</td>
                   <td className="px-4 py-3 text-muted-foreground">{partner.email}</td>
-                  <td className="px-4 py-3 text-muted-foreground">{formatDate(partner.createdAt)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {formatDate(partner.createdAt)}
+                  </td>
                   <td className="px-4 py-3">
                     <Button variant="outline" size="sm" onClick={() => openEditModal(partner)}>
                       Editar

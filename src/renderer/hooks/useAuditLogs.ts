@@ -37,19 +37,29 @@ type AuditLogsState =
   | { status: 'error'; data: AuditLog[]; pagination: AuditLogPagination | null }
 
 const serializeFilters = (filters: AuditLogFilters) => {
-  const entries = Object.entries(filters).filter(([, value]) => value !== undefined && value !== null && value !== '')
+  const entries = Object.entries(filters).filter(
+    ([, value]) => value !== undefined && value !== null && value !== ''
+  )
   return Object.fromEntries(entries)
 }
 
 export function useAuditLogs(filters: AuditLogFilters): AuditLogsState {
   const serializedFilters = useMemo(() => serializeFilters(filters), [filters])
-  const [state, setState] = useState<AuditLogsState>({ status: 'loading', data: [], pagination: null })
+  const [state, setState] = useState<AuditLogsState>({
+    status: 'loading',
+    data: [],
+    pagination: null
+  })
 
   useEffect(() => {
     let canceled = false
     const controller = new AbortController()
 
-    setState(previous => ({ status: 'loading', data: previous.data, pagination: previous.pagination }))
+    setState((previous) => ({
+      status: 'loading',
+      data: previous.data,
+      pagination: previous.pagination
+    }))
 
     const params = new URLSearchParams()
     Object.entries(serializedFilters).forEach(([key, value]) => {
@@ -60,8 +70,8 @@ export function useAuditLogs(filters: AuditLogFilters): AuditLogsState {
     const url = `http://localhost:5174/audit-logs${query ? `?${query}` : ''}`
 
     fetch(url, { signal: controller.signal })
-      .then(response => response.json())
-      .then(payload => {
+      .then((response) => response.json())
+      .then((payload) => {
         if (canceled) {
           return
         }
@@ -82,12 +92,17 @@ export function useAuditLogs(filters: AuditLogFilters): AuditLogsState {
 
         setState({ status: 'error', data: [], pagination: null })
       })
-      .catch(error => {
+      .catch((error) => {
         if (canceled || controller.signal.aborted) {
           return
         }
 
-        if (error && typeof error === 'object' && 'name' in error && (error as { name?: string }).name === 'AbortError') {
+        if (
+          error &&
+          typeof error === 'object' &&
+          'name' in error &&
+          (error as { name?: string }).name === 'AbortError'
+        ) {
           return
         }
 

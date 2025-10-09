@@ -130,7 +130,12 @@ function usePartners(search: string): PartnersState {
             return
           }
 
-          if (typeof error === 'object' && error && 'name' in error && (error as { name?: string }).name === 'AbortError') {
+          if (
+            typeof error === 'object' &&
+            error &&
+            'name' in error &&
+            (error as { name?: string }).name === 'AbortError'
+          ) {
             return
           }
 
@@ -191,7 +196,12 @@ function useVouchers(
           return
         }
 
-        if (typeof error === 'object' && error && 'name' in error && (error as { name?: string }).name === 'AbortError') {
+        if (
+          typeof error === 'object' &&
+          error &&
+          'name' in error &&
+          (error as { name?: string }).name === 'AbortError'
+        ) {
           return
         }
 
@@ -214,7 +224,12 @@ function useDashboardStats(): DashboardStatsState {
     fetch('http://localhost:5174/stats')
       .then((response) => response.json())
       .then((payload) => {
-        if (payload && typeof payload === 'object' && payload.data && typeof payload.data === 'object') {
+        if (
+          payload &&
+          typeof payload === 'object' &&
+          payload.data &&
+          typeof payload.data === 'object'
+        ) {
           const raw = payload.data as Record<string, unknown>
           const stats: DashboardStats = {
             partnersCount: parseStatValue(raw.partnersCount),
@@ -467,9 +482,10 @@ export default function App() {
         }
       )
 
-      const payload = await response
-        .json()
-        .catch(() => null) as { data?: unknown; error?: unknown } | null
+      const payload = (await response.json().catch(() => null)) as {
+        data?: unknown
+        error?: unknown
+      } | null
 
       if (!response.ok) {
         const message =
@@ -579,7 +595,9 @@ export default function App() {
                 autoComplete="off"
                 className="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
-              <p className="mt-1 text-xs text-muted-foreground">Filtrar por nome, documento ou email</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Filtrar por nome, documento ou email
+              </p>
             </div>
           </div>
           {partnersState.status === 'loading' && (
@@ -609,8 +627,12 @@ export default function App() {
                       <td className="px-4 py-3 font-medium text-foreground">{partner.name}</td>
                       <td className="px-4 py-3 text-muted-foreground">{partner.document}</td>
                       <td className="px-4 py-3 text-muted-foreground">{partner.email ?? '—'}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatDate(partner.createdAt)}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{formatDate(partner.updatedAt)}</td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {formatDate(partner.createdAt)}
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
+                        {formatDate(partner.updatedAt)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -666,28 +688,28 @@ export default function App() {
           {reportsState.status === 'success' && reportsState.data.length === 0 && (
             <p className="text-sm text-muted-foreground">Nenhum relatório disponível.</p>
           )}
-      {reportsState.status === 'success' && reportsState.data.length > 0 && (
-        <div className="grid gap-3 md:grid-cols-2">
-          {reportsState.data.map((report) => (
-            <article key={report.id} className="rounded-lg border bg-background p-4 shadow-sm">
-              <header className="space-y-1">
-                <p className="text-sm font-medium text-muted-foreground">
-                  {report.partner.name}
-                </p>
-                <h3 className="text-base font-semibold text-foreground">{report.title}</h3>
-              </header>
-              <p className="mt-2 text-sm text-muted-foreground">
-                {report.summary ?? 'Sem resumo disponível.'}
-              </p>
-              <p className="mt-3 text-xs text-muted-foreground">
-                Emitido em {formatDateTime(report.issuedAt)}
-              </p>
-            </article>
-          ))}
+          {reportsState.status === 'success' && reportsState.data.length > 0 && (
+            <div className="grid gap-3 md:grid-cols-2">
+              {reportsState.data.map((report) => (
+                <article key={report.id} className="rounded-lg border bg-background p-4 shadow-sm">
+                  <header className="space-y-1">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {report.partner.name}
+                    </p>
+                    <h3 className="text-base font-semibold text-foreground">{report.title}</h3>
+                  </header>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    {report.summary ?? 'Sem resumo disponível.'}
+                  </p>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Emitido em {formatDateTime(report.issuedAt)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          )}
         </div>
-      )}
-    </div>
-  </section>
+      </section>
 
       <section className="space-y-4">
         <div className="space-y-3">
@@ -729,7 +751,9 @@ export default function App() {
                       </option>
                     ))}
                 </select>
-                <p className="mt-1 text-xs text-muted-foreground">Escolha qual relatório deseja exportar</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Escolha qual relatório deseja exportar
+                </p>
               </div>
               <div className="w-full lg:w-48">
                 <label htmlFor="export-format" className="sr-only">
@@ -748,14 +772,18 @@ export default function App() {
                   <option value="pdf">PDF consolidado</option>
                   <option value="zip">Pacote ZIP</option>
                 </select>
-                <p className="mt-1 text-xs text-muted-foreground">Escolha o formato do arquivo gerado</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Escolha o formato do arquivo gerado
+                </p>
               </div>
               <Button
                 type="button"
                 onClick={handleReportExport}
                 disabled={reportExportReportId === 'none' || reportExportState === 'loading'}
               >
-                {reportExportState === 'loading' ? 'Gerando exportação...' : 'Exportar comprovantes'}
+                {reportExportState === 'loading'
+                  ? 'Gerando exportação...'
+                  : 'Exportar comprovantes'}
               </Button>
             </div>
           </div>
@@ -773,23 +801,32 @@ export default function App() {
           {reportExportState === 'success' && reportExportResult && (
             <div className="space-y-4 rounded-md border bg-background p-4">
               <div>
-                <p className="text-sm font-medium text-foreground">{reportExportResult.report.title}</p>
+                <p className="text-sm font-medium text-foreground">
+                  {reportExportResult.report.title}
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  Formato: {reportExportResult.file.format.toUpperCase()} • Caminho: {reportExportResult.file.path}
+                  Formato: {reportExportResult.file.format.toUpperCase()} • Caminho:{' '}
+                  {reportExportResult.file.path}
                 </p>
               </div>
               <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
                 <div>
                   <dt className="text-muted-foreground">Total de vouchers</dt>
-                  <dd className="font-medium">{formatNumber(reportExportResult.counts.totalVouchers)}</dd>
+                  <dd className="font-medium">
+                    {formatNumber(reportExportResult.counts.totalVouchers)}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Disponíveis</dt>
-                  <dd className="font-medium">{formatNumber(reportExportResult.counts.available)}</dd>
+                  <dd className="font-medium">
+                    {formatNumber(reportExportResult.counts.available)}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Incluídos</dt>
-                  <dd className="font-medium">{formatNumber(reportExportResult.counts.included)}</dd>
+                  <dd className="font-medium">
+                    {formatNumber(reportExportResult.counts.included)}
+                  </dd>
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Ausentes</dt>
@@ -797,7 +834,9 @@ export default function App() {
                 </div>
                 <div>
                   <dt className="text-muted-foreground">Não suportados</dt>
-                  <dd className="font-medium">{formatNumber(reportExportResult.counts.unsupported)}</dd>
+                  <dd className="font-medium">
+                    {formatNumber(reportExportResult.counts.unsupported)}
+                  </dd>
                 </div>
               </dl>
               {reportExportResult.summary.length === 0 ? (
@@ -830,12 +869,16 @@ export default function App() {
                         return (
                           <tr key={entry.voucherId}>
                             <td className="px-4 py-3 font-medium text-foreground">{entry.code}</td>
-                            <td className="px-4 py-3 text-muted-foreground">{formatDateTime(entry.issuedAt)}</td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {formatDateTime(entry.issuedAt)}
+                            </td>
                             <td className="px-4 py-3 text-muted-foreground">
                               {entry.redeemedAt ? formatDateTime(entry.redeemedAt) : '—'}
                             </td>
                             <td className="px-4 py-3">
-                              <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses}`}>
+                              <span
+                                className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses}`}
+                              >
                                 {statusLabel}
                               </span>
                             </td>
@@ -870,7 +913,9 @@ export default function App() {
                 </label>
                 <select
                   id="pending-report"
-                  value={pendingPartnersReportId === 'none' ? 'none' : String(pendingPartnersReportId)}
+                  value={
+                    pendingPartnersReportId === 'none' ? 'none' : String(pendingPartnersReportId)
+                  }
                   onChange={(event) => {
                     const nextValue = event.target.value
                     if (nextValue === 'none') {
@@ -896,7 +941,9 @@ export default function App() {
                       </option>
                     ))}
                 </select>
-                <p className="mt-1 text-xs text-muted-foreground">Escolha o relatório para verificar pendências</p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Escolha o relatório para verificar pendências
+                </p>
               </div>
               <div className="w-full lg:w-64">
                 <label htmlFor="pending-partners-search" className="sr-only">
@@ -928,10 +975,14 @@ export default function App() {
             <p className="text-sm text-muted-foreground">Carregando parceiros pendentes...</p>
           )}
           {pendingPartnersState.status === 'error' && (
-            <p className="text-sm text-red-600">Não foi possível carregar os parceiros pendentes.</p>
+            <p className="text-sm text-red-600">
+              Não foi possível carregar os parceiros pendentes.
+            </p>
           )}
           {pendingPartnersState.status === 'success' && pendingPartnersState.data.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhum parceiro pendente encontrado para este relatório.</p>
+            <p className="text-sm text-muted-foreground">
+              Nenhum parceiro pendente encontrado para este relatório.
+            </p>
           )}
           {pendingPartnersState.status === 'success' && pendingPartnersState.data.length > 0 && (
             <div className="overflow-x-auto rounded-md border">
@@ -970,7 +1021,9 @@ export default function App() {
                           {stats.lastIssuedAt ? formatDateTime(stats.lastIssuedAt) : '—'}
                         </td>
                         <td className="px-4 py-3">
-                          <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses}`}>
+                          <span
+                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses}`}
+                          >
                             {statusLabel}
                           </span>
                         </td>
@@ -981,37 +1034,39 @@ export default function App() {
               </table>
             </div>
           )}
-          {pendingPartnersState.status === 'success' && pendingPartnersState.pagination.totalPages > 1 && (
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-muted-foreground">
-                Página {pendingPartnersState.pagination.page} de {pendingPartnersState.pagination.totalPages}
-              </p>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPendingPartnersPage((current) => Math.max(1, current - 1))}
-                  disabled={pendingPartnersPage <= 1}
-                >
-                  Anterior
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setPendingPartnersPage((current) =>
-                      Math.min(pendingPartnersState.pagination.totalPages, current + 1)
-                    )
-                  }
-                  disabled={pendingPartnersPage >= pendingPartnersState.pagination.totalPages}
-                >
-                  Próxima
-                </Button>
+          {pendingPartnersState.status === 'success' &&
+            pendingPartnersState.pagination.totalPages > 1 && (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Página {pendingPartnersState.pagination.page} de{' '}
+                  {pendingPartnersState.pagination.totalPages}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPendingPartnersPage((current) => Math.max(1, current - 1))}
+                    disabled={pendingPartnersPage <= 1}
+                  >
+                    Anterior
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setPendingPartnersPage((current) =>
+                        Math.min(pendingPartnersState.pagination.totalPages, current + 1)
+                      )
+                    }
+                    disabled={pendingPartnersPage >= pendingPartnersState.pagination.totalPages}
+                  >
+                    Próxima
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       </section>
 
@@ -1093,7 +1148,11 @@ export default function App() {
                   value={voucherStatusFilter}
                   onChange={(event) => {
                     const nextValue = event.target.value
-                    if (nextValue === 'all' || nextValue === 'redeemed' || nextValue === 'pending') {
+                    if (
+                      nextValue === 'all' ||
+                      nextValue === 'redeemed' ||
+                      nextValue === 'pending'
+                    ) {
                       setVoucherStatusFilter(nextValue)
                     }
                   }}
@@ -1139,7 +1198,9 @@ export default function App() {
                         <td className="px-4 py-3 text-muted-foreground">
                           {voucher.report ? voucher.report.title : '—'}
                         </td>
-                        <td className="px-4 py-3 text-muted-foreground">{formatDateTime(voucher.issuedAt)}</td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {formatDateTime(voucher.issuedAt)}
+                        </td>
                         <td className="px-4 py-3">
                           <span
                             className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
@@ -1165,4 +1226,3 @@ export default function App() {
     </div>
   )
 }
-

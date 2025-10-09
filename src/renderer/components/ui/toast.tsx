@@ -24,7 +24,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const pushToast = useCallback(
-    ({ title, description, variant = 'default' }: { title: string; description?: string; variant?: ToastVariant }) => {
+    ({
+      title,
+      description,
+      variant = 'default'
+    }: {
+      title: string
+      description?: string
+      variant?: ToastVariant
+    }) => {
       const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`
       setToasts((previous) => [...previous, { id, title, description, variant }])
       window.setTimeout(() => removeToast(id), 4000)
@@ -53,7 +61,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold">{toast.title}</p>
-                  {toast.description && <p className="mt-1 text-xs text-muted-foreground">{toast.description}</p>}
+                  {toast.description && (
+                    <p className="mt-1 text-xs text-muted-foreground">{toast.description}</p>
+                  )}
                 </div>
                 <button
                   type="button"

@@ -5,24 +5,24 @@ import { useReports, type Report, type ReportStatus, type ReportsState } from '.
 const statusLabels: Record<ReportStatus, string> = {
   rascunho: 'Rascunho',
   'em revisão': 'Em revisão',
-  aprovado: 'Aprovado',
+  aprovado: 'Aprovado'
 }
 
 const statusBadgeStyles: Record<ReportStatus, string> = {
   rascunho: 'bg-amber-100 text-amber-900 border border-amber-200',
   'em revisão': 'bg-blue-100 text-blue-900 border border-blue-200',
-  aprovado: 'bg-emerald-100 text-emerald-900 border border-emerald-200',
+  aprovado: 'bg-emerald-100 text-emerald-900 border border-emerald-200'
 }
 
 const statusBarStyles: Record<ReportStatus, string> = {
   rascunho: 'bg-amber-500',
   'em revisão': 'bg-blue-500',
-  aprovado: 'bg-emerald-500',
+  aprovado: 'bg-emerald-500'
 }
 
 const numberFormatter = new Intl.NumberFormat('pt-BR')
 const dateTimeFormatter = new Intl.DateTimeFormat('pt-BR', {
-  dateStyle: 'medium',
+  dateStyle: 'medium'
 })
 
 function formatNumber(value: number) {
@@ -46,7 +46,7 @@ function getFilteredReports(
   reportsState: ReportsState,
   statusFilter: 'todos' | ReportStatus,
   startMonth: string,
-  endMonth: string,
+  endMonth: string
 ) {
   if (reportsState.status !== 'success') {
     return [] as Report[]
@@ -68,7 +68,7 @@ export function DashboardPage() {
 
   const filteredReports = useMemo(
     () => getFilteredReports(reportsState, statusFilter, startMonth, endMonth),
-    [reportsState, statusFilter, startMonth, endMonth],
+    [reportsState, statusFilter, startMonth, endMonth]
   )
 
   const totals = useMemo(() => {
@@ -79,20 +79,22 @@ export function DashboardPage() {
     return filteredReports.reduce(
       (accumulator, report) => ({
         expected: accumulator.expected + report.expectedDeliveries,
-        received: accumulator.received + report.receivedDeliveries,
+        received: accumulator.received + report.receivedDeliveries
       }),
-      { expected: 0, received: 0 },
+      { expected: 0, received: 0 }
     )
   }, [filteredReports])
 
-  const overallProgress = totals.expected === 0 ? 0 : Math.round((totals.received / totals.expected) * 100)
+  const overallProgress =
+    totals.expected === 0 ? 0 : Math.round((totals.received / totals.expected) * 100)
 
   return (
     <div className="space-y-6">
       <header className="space-y-1">
         <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
         <p className="text-sm text-muted-foreground">
-          Acompanhe os relatórios, status de entrega e evolução das metas de distribuição de vouchers.
+          Acompanhe os relatórios, status de entrega e evolução das metas de distribuição de
+          vouchers.
         </p>
       </header>
 
@@ -149,14 +151,16 @@ export function DashboardPage() {
           <div className="space-y-1 rounded-md border border-dashed border-muted-foreground/30 bg-muted/30 p-3 text-sm">
             <p className="font-medium text-foreground">Resumo do filtro atual</p>
             <p className="text-muted-foreground">
-              {filteredReports.length}{' '}
-              {filteredReports.length === 1 ? 'relatório' : 'relatórios'} encontrados •{' '}
-              {formatNumber(totals.received)} de {formatNumber(totals.expected)} vouchers recebidos
+              {filteredReports.length} {filteredReports.length === 1 ? 'relatório' : 'relatórios'}{' '}
+              encontrados • {formatNumber(totals.received)} de {formatNumber(totals.expected)}{' '}
+              vouchers recebidos
             </p>
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div className="h-full bg-primary" style={{ width: `${overallProgress}%` }} />
             </div>
-            <p className="text-xs text-muted-foreground">{overallProgress}% das entregas previstas</p>
+            <p className="text-xs text-muted-foreground">
+              {overallProgress}% das entregas previstas
+            </p>
           </div>
         </div>
       </section>
@@ -166,7 +170,9 @@ export function DashboardPage() {
           <p className="text-sm text-muted-foreground">Carregando relatórios para o dashboard...</p>
         )}
         {reportsState.status === 'error' && (
-          <p className="text-sm text-red-600">Não foi possível carregar os relatórios do dashboard.</p>
+          <p className="text-sm text-red-600">
+            Não foi possível carregar os relatórios do dashboard.
+          </p>
         )}
         {reportsState.status === 'success' && filteredReports.length === 0 && (
           <p className="text-sm text-muted-foreground">
@@ -180,7 +186,10 @@ export function DashboardPage() {
               const progress = getProgress(report)
 
               return (
-                <article key={report.id} className="flex flex-col gap-4 rounded-lg border bg-background p-4 shadow-sm">
+                <article
+                  key={report.id}
+                  className="flex flex-col gap-4 rounded-lg border bg-background p-4 shadow-sm"
+                >
                   <header className="space-y-2">
                     <div className="flex items-center justify-between gap-2">
                       <div>
@@ -189,7 +198,9 @@ export function DashboardPage() {
                         </p>
                         <h2 className="text-lg font-semibold text-foreground">{report.title}</h2>
                       </div>
-                      <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusBadgeStyles[report.status]}`}>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusBadgeStyles[report.status]}`}
+                      >
                         {statusLabels[report.status]}
                       </span>
                     </div>
@@ -206,9 +217,14 @@ export function DashboardPage() {
                       <span>{formatNumber(report.expectedDeliveries)} previstos</span>
                     </div>
                     <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div className={`h-full transition-all duration-300 ${statusBarStyles[report.status]}`} style={{ width: `${progress}%` }} />
+                      <div
+                        className={`h-full transition-all duration-300 ${statusBarStyles[report.status]}`}
+                        style={{ width: `${progress}%` }}
+                      />
                     </div>
-                    <p className="text-xs text-muted-foreground">{progress}% das entregas concluídas</p>
+                    <p className="text-xs text-muted-foreground">
+                      {progress}% das entregas concluídas
+                    </p>
                   </div>
                 </article>
               )

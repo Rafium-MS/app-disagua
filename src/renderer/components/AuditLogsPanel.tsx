@@ -45,13 +45,10 @@ export function AuditLogsPanel() {
     setPage(1)
   }, [])
 
-  const handleFilterSubmit = useCallback(
-    (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
-      setPage(1)
-    },
-    []
-  )
+  const handleFilterSubmit = useCallback((event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setPage(1)
+  }, [])
 
   const handleClearFilters = useCallback(() => {
     setEntityFilter('')
@@ -73,12 +70,15 @@ export function AuditLogsPanel() {
         </div>
       </div>
 
-      <form onSubmit={handleFilterSubmit} className="grid gap-4 rounded-lg border bg-background p-4 sm:grid-cols-2 lg:grid-cols-3">
+      <form
+        onSubmit={handleFilterSubmit}
+        className="grid gap-4 rounded-lg border bg-background p-4 sm:grid-cols-2 lg:grid-cols-3"
+      >
         <label className="space-y-1">
           <span className="block text-sm font-medium text-foreground">Entidade</span>
           <input
             value={entityFilter}
-            onChange={event => {
+            onChange={(event) => {
               setEntityFilter(event.target.value)
               resetPagination()
             }}
@@ -90,7 +90,7 @@ export function AuditLogsPanel() {
           <span className="block text-sm font-medium text-foreground">Ação</span>
           <input
             value={actionFilter}
-            onChange={event => {
+            onChange={(event) => {
               setActionFilter(event.target.value)
               resetPagination()
             }}
@@ -102,7 +102,7 @@ export function AuditLogsPanel() {
           <span className="block text-sm font-medium text-foreground">Autor</span>
           <input
             value={actorFilter}
-            onChange={event => {
+            onChange={(event) => {
               setActorFilter(event.target.value)
               resetPagination()
             }}
@@ -115,7 +115,7 @@ export function AuditLogsPanel() {
           <input
             type="date"
             value={fromFilter}
-            onChange={event => {
+            onChange={(event) => {
               setFromFilter(event.target.value)
               resetPagination()
             }}
@@ -127,7 +127,7 @@ export function AuditLogsPanel() {
           <input
             type="date"
             value={toFilter}
-            onChange={event => {
+            onChange={(event) => {
               setToFilter(event.target.value)
               resetPagination()
             }}
@@ -179,23 +179,32 @@ export function AuditLogsPanel() {
               </tr>
             )}
             {logsState.status === 'success' &&
-              logsState.data.map(log => (
+              logsState.data.map((log) => (
                 <tr key={log.id}>
-                  <td className="px-4 py-3 align-top font-medium text-foreground">{formatDateTime(log.createdAt)}</td>
+                  <td className="px-4 py-3 align-top font-medium text-foreground">
+                    {formatDateTime(log.createdAt)}
+                  </td>
                   <td className="px-4 py-3 align-top">
                     <div className="font-medium text-foreground">{log.entity}</div>
-                    {log.entityId && <div className="text-xs text-muted-foreground">ID: {log.entityId}</div>}
+                    {log.entityId && (
+                      <div className="text-xs text-muted-foreground">ID: {log.entityId}</div>
+                    )}
                   </td>
                   <td className="px-4 py-3 align-top">
                     <div className="font-medium text-foreground">{log.action}</div>
-                    {log.requestId && <div className="text-xs text-muted-foreground">Req: {log.requestId}</div>}
+                    {log.requestId && (
+                      <div className="text-xs text-muted-foreground">Req: {log.requestId}</div>
+                    )}
                   </td>
                   <td className="px-4 py-3 align-top">
                     {log.actor ? log.actor : <span className="text-muted-foreground">—</span>}
                   </td>
                   <td className="px-4 py-3 align-top">
                     <div>{log.requestMethod ?? '—'}</div>
-                    <div className="truncate text-xs text-muted-foreground" title={log.requestUrl ?? undefined}>
+                    <div
+                      className="truncate text-xs text-muted-foreground"
+                      title={log.requestUrl ?? undefined}
+                    >
                       {log.requestUrl ?? '—'}
                     </div>
                   </td>
@@ -220,7 +229,7 @@ export function AuditLogsPanel() {
               type="button"
               variant="outline"
               disabled={logsState.pagination.page <= 1}
-              onClick={() => setPage(previous => Math.max(1, previous - 1))}
+              onClick={() => setPage((previous) => Math.max(1, previous - 1))}
             >
               Anterior
             </Button>
@@ -228,7 +237,7 @@ export function AuditLogsPanel() {
               type="button"
               variant="outline"
               disabled={logsState.pagination.page >= logsState.pagination.totalPages}
-              onClick={() => setPage(previous => previous + 1)}
+              onClick={() => setPage((previous) => previous + 1)}
             >
               Próxima
             </Button>

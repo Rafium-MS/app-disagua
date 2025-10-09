@@ -59,7 +59,11 @@ export function Dialog({ open, onClose, title, description, children, footer }: 
           {description && <p className="text-sm text-muted-foreground">{description}</p>}
           <div className="space-y-3">{children}</div>
         </div>
-        {footer && <div className="flex justify-end gap-3 border-t border-border bg-muted/40 px-6 py-4">{footer}</div>}
+        {footer && (
+          <div className="flex justify-end gap-3 border-t border-border bg-muted/40 px-6 py-4">
+            {footer}
+          </div>
+        )}
       </div>
     </div>,
     document.body
