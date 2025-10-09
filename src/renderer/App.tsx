@@ -631,6 +631,266 @@ export default function App() {
     }
   }
 
+  const renderReportExportSummary = (): JSX.Element | null => {
+    if (!reportExportResult) {
+      return null
+    }
+
+    if (reportExportResult.summary.length === 0) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          Nenhum comprovante foi incluído no arquivo gerado.
+        </p>
+      )
+    }
+
+    return (
+      <div className="overflow-x-auto rounded-lg border border-border/60">
+        <table className="min-w-full divide-y divide-border text-sm">
+          <thead className="bg-muted/50">
+            <tr>
+              <th className="px-4 py-3 text-left font-medium">Voucher</th>
+              <th className="px-4 py-3 text-left font-medium">Emitido em</th>
+              <th className="px-4 py-3 text-left font-medium">Resgatado em</th>
+              <th className="px-4 py-3 text-left font-medium">Status</th>
+              <th className="px-4 py-3 text-left font-medium">Página</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border bg-background">
+            {reportExportResult.summary.map((entry) => {
+              const statusLabel = describeExportSummaryStatus(entry.status)
+              const statusVariant = getExportSummaryVariant(entry.status)
+              const statusClasses =
+                statusVariant === 'success'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : statusVariant === 'warning'
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+
+              return (
+                <tr key={entry.voucherId}>
+                  <td className="px-4 py-3 font-medium text-foreground">{entry.code}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{formatDateTime(entry.issuedAt)}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {entry.redeemedAt ? formatDateTime(entry.redeemedAt) : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses}`}
+                    >
+                      {statusLabel}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {entry.pageStart ? `Página ${entry.pageStart}` : '—'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  const renderReportExportResult = (): JSX.Element | null => {
+    if (reportExportState !== 'success' || !reportExportResult) {
+      return null
+    }
+
+    return (
+      <div className="space-y-4 rounded-xl border border-border/60 bg-background/90 p-5 shadow-sm">
+        <div>
+          <p className="text-sm font-medium text-foreground">{reportExportResult.report.title}</p>
+          <p className="text-xs text-muted-foreground">
+            Formato: {reportExportResult.file.format.toUpperCase()} • Caminho: {reportExportResult.file.path}
+          </p>
+        </div>
+        <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
+          <div>
+            <dt className="text-muted-foreground">Total de vouchers</dt>
+            <dd className="font-medium">{formatNumber(reportExportResult.counts.totalVouchers)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Disponíveis</dt>
+            <dd className="font-medium">{formatNumber(reportExportResult.counts.available)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Incluídos</dt>
+            <dd className="font-medium">{formatNumber(reportExportResult.counts.included)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Ausentes</dt>
+            <dd className="font-medium">{formatNumber(reportExportResult.counts.missing)}</dd>
+          </div>
+          <div>
+            <dt className="text-muted-foreground">Não suportados</dt>
+            <dd className="font-medium">{formatNumber(reportExportResult.counts.unsupported)}</dd>
+          </div>
+        </dl>
+        {renderReportExportSummary()}
+      </div>
+    )
+  }
+
+  const renderPendingPartnersTable = (): JSX.Element | null => {
+    if (pendingPartnersState.status !== 'success') {
+      return null
+    }
+
+    if (pendingPartnersState.data.length === 0) {
+      return (
+        <p className="text-sm text-muted-foreground">
+          Nenhum parceiro pendente encontrado para este relatório.
+        </p>
+      )
+    }
+
+    return (
+      <div className="overflow-x-auto rounded-lg border border-border/60">
+        <table className="min-w-full divide-y divide-border text-sm">
+          <thead className="bg-muted/50">
+            <tr>
+              <th className="px-4 py-3 text-left font-medium">Parceiro</th>
+              <th className="px-4 py-3 text-left font-medium">Documento</th>
+              <th className="px-4 py-3 text-left font-medium">Email</th>
+              <th className="px-4 py-3 text-left font-medium">Vouchers do relatório</th>
+              <th className="px-4 py-3 text-left font-medium">Vouchers resgatados</th>
+              <th className="px-4 py-3 text-left font-medium">Último voucher</th>
+              <th className="px-4 py-3 text-left font-medium">Situação</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border bg-background">
+            {pendingPartnersState.data.map((partner) => {
+              const stats = partner.reportVoucherStats
+              const statusLabel = describePendingPartnerStatus(stats)
+              const statusVariant = getPendingPartnerStatusVariant(stats)
+              const statusClasses =
+                statusVariant === 'success'
+                  ? 'bg-emerald-100 text-emerald-800'
+                  : statusVariant === 'warning'
+                    ? 'bg-amber-100 text-amber-800'
+                    : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
+
+              return (
+                <tr key={partner.id} className="hover:bg-muted/30">
+                  <td className="px-4 py-3 font-medium text-foreground">{partner.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{partner.document}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{partner.email ?? '—'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{partner.reportVoucherStats.total}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{partner.reportVoucherStats.redeemed}</td>
+                  <td className="px-4 py-3 text-muted-foreground">
+                    {partner.reportVoucherStats.lastIssuedAt
+                      ? formatDateTime(partner.reportVoucherStats.lastIssuedAt)
+                      : '—'}
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses}`}>
+                      {statusLabel}
+                    </span>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
+  const renderPendingPartnersPagination = (): JSX.Element | null => {
+    if (pendingPartnersState.status !== 'success') {
+      return null
+    }
+
+    if (pendingPartnersState.pagination.totalPages <= 1) {
+      return null
+    }
+
+    return (
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs text-muted-foreground">
+          Página {pendingPartnersState.pagination.page} de {pendingPartnersState.pagination.totalPages}
+        </p>
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setPendingPartnersPage((current) => Math.max(1, current - 1))}
+            disabled={pendingPartnersPage <= 1}
+          >
+            Anterior
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setPendingPartnersPage((current) =>
+                Math.min(pendingPartnersState.pagination.totalPages, current + 1)
+              )
+            }
+            disabled={pendingPartnersPage >= pendingPartnersState.pagination.totalPages}
+          >
+            Próxima
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  const renderVouchersTable = (): JSX.Element | null => {
+    if (vouchersState.status !== 'success') {
+      return null
+    }
+
+    if (vouchersState.data.length === 0) {
+      return <p className="text-sm text-muted-foreground">Nenhum voucher disponível.</p>
+    }
+
+    return (
+      <div className="overflow-x-auto rounded-lg border border-border/60">
+        <table className="min-w-full divide-y divide-border text-sm">
+          <thead className="bg-muted/50">
+            <tr>
+              <th className="px-4 py-3 text-left font-medium">Código</th>
+              <th className="px-4 py-3 text-left font-medium">Parceiro</th>
+              <th className="px-4 py-3 text-left font-medium">Relatório</th>
+              <th className="px-4 py-3 text-left font-medium">Emitido em</th>
+              <th className="px-4 py-3 text-left font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border bg-background">
+            {vouchersState.data.map((voucher) => {
+              const status = getVoucherStatus(voucher.redeemedAt)
+
+              return (
+                <tr key={voucher.id} className="hover:bg-muted/30">
+                  <td className="px-4 py-3 font-medium text-foreground">{voucher.code}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{voucher.partner.name}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{voucher.report ? voucher.report.title : '—'}</td>
+                  <td className="px-4 py-3 text-muted-foreground">{formatDateTime(voucher.issuedAt)}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                        status.variant === 'success'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-amber-100 text-amber-800'
+                      }`}
+                    >
+                      {status.label}
+                    </span>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-muted/20 py-10">
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-6">
@@ -924,106 +1184,7 @@ export default function App() {
             {reportExportState === 'error' && reportExportError && (
               <p className="text-sm text-red-600">{reportExportError}</p>
             )}
-            {reportExportState === 'success' && reportExportResult && (
-              <div className="space-y-4 rounded-xl border border-border/60 bg-background/90 p-5 shadow-sm">
-                <div>
-                  <p className="text-sm font-medium text-foreground">
-                    {reportExportResult.report.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    Formato: {reportExportResult.file.format.toUpperCase()} • Caminho:{' '}
-                    {reportExportResult.file.path}
-                  </p>
-                </div>
-                <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-5">
-                  <div>
-                    <dt className="text-muted-foreground">Total de vouchers</dt>
-                    <dd className="font-medium">
-                      {formatNumber(reportExportResult.counts.totalVouchers)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Disponíveis</dt>
-                    <dd className="font-medium">
-                      {formatNumber(reportExportResult.counts.available)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Incluídos</dt>
-                    <dd className="font-medium">
-                      {formatNumber(reportExportResult.counts.included)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Ausentes</dt>
-                    <dd className="font-medium">
-                      {formatNumber(reportExportResult.counts.missing)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-muted-foreground">Não suportados</dt>
-                    <dd className="font-medium">
-                      {formatNumber(reportExportResult.counts.unsupported)}
-                    </dd>
-                  </div>
-                </dl>
-                {reportExportResult.summary.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    Nenhum comprovante foi incluído no arquivo gerado.
-                  </p>
-                ) : (
-                  <div className="overflow-x-auto rounded-lg border border-border/60">
-                    <table className="min-w-full divide-y divide-border text-sm">
-                      <thead className="bg-muted/50">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-medium">Voucher</th>
-                          <th className="px-4 py-3 text-left font-medium">Emitido em</th>
-                          <th className="px-4 py-3 text-left font-medium">Resgatado em</th>
-                          <th className="px-4 py-3 text-left font-medium">Status</th>
-                          <th className="px-4 py-3 text-left font-medium">Página</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border bg-background">
-                        {reportExportResult.summary.map((entry) => {
-                          const statusLabel = describeExportSummaryStatus(entry.status)
-                          const statusVariant = getExportSummaryVariant(entry.status)
-                          const statusClasses =
-                            statusVariant === 'success'
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : statusVariant === 'warning'
-                                ? 'bg-amber-100 text-amber-800'
-                                : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
-
-                          return (
-                            <tr key={entry.voucherId}>
-                              <td className="px-4 py-3 font-medium text-foreground">
-                                {entry.code}
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground">
-                                {formatDateTime(entry.issuedAt)}
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground">
-                                {entry.redeemedAt ? formatDateTime(entry.redeemedAt) : '—'}
-                              </td>
-                              <td className="px-4 py-3">
-                                <span
-                                  className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses}`}
-                                >
-                                  {statusLabel}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-muted-foreground">
-                                {entry.pageStart ? `Página ${entry.pageStart}` : '—'}
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            )}
+            {renderReportExportResult()}
           </div>
         </section>
         <section className={`${panelSectionClassName} space-y-5`}>
@@ -1107,94 +1268,8 @@ export default function App() {
               Não foi possível carregar os parceiros pendentes.
             </p>
           )}
-          {pendingPartnersState.status === 'success' && pendingPartnersState.data.length === 0 && (
-            <p className="text-sm text-muted-foreground">
-              Nenhum parceiro pendente encontrado para este relatório.
-            </p>
-          )}
-          {pendingPartnersState.status === 'success' && pendingPartnersState.data.length > 0 && (
-            <div className="overflow-x-auto rounded-lg border border-border/60">
-              <table className="min-w-full divide-y divide-border text-sm">
-                <thead className="bg-muted/50">
-                  <tr>
-                    <th className="px-4 py-3 text-left font-medium">Parceiro</th>
-                    <th className="px-4 py-3 text-left font-medium">Documento</th>
-                    <th className="px-4 py-3 text-left font-medium">Email</th>
-                    <th className="px-4 py-3 text-left font-medium">Vouchers do relatório</th>
-                    <th className="px-4 py-3 text-left font-medium">Vouchers resgatados</th>
-                    <th className="px-4 py-3 text-left font-medium">Último voucher</th>
-                    <th className="px-4 py-3 text-left font-medium">Situação</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border bg-background">
-                  {pendingPartnersState.data.map((partner) => {
-                    const stats = partner.reportVoucherStats
-                    const statusLabel = describePendingPartnerStatus(stats)
-                    const statusVariant = getPendingPartnerStatusVariant(stats)
-                    const statusClasses =
-                      statusVariant === 'success'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : statusVariant === 'warning'
-                          ? 'bg-amber-100 text-amber-800'
-                          : 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-200'
-
-                    return (
-                      <tr key={partner.id} className="hover:bg-muted/30">
-                        <td className="px-4 py-3 font-medium text-foreground">{partner.name}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{partner.document}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{partner.email ?? '—'}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{stats.total}</td>
-                        <td className="px-4 py-3 text-muted-foreground">{stats.redeemed}</td>
-                        <td className="px-4 py-3 text-muted-foreground">
-                          {stats.lastIssuedAt ? formatDateTime(stats.lastIssuedAt) : '—'}
-                        </td>
-                        <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${statusClasses}`}
-                          >
-                            {statusLabel}
-                          </span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-          {pendingPartnersState.status === 'success' &&
-            pendingPartnersState.pagination.totalPages > 1 && (
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-xs text-muted-foreground">
-                  Página {pendingPartnersState.pagination.page} de{' '}
-                  {pendingPartnersState.pagination.totalPages}
-                </p>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPendingPartnersPage((current) => Math.max(1, current - 1))}
-                    disabled={pendingPartnersPage <= 1}
-                  >
-                    Anterior
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setPendingPartnersPage((current) =>
-                        Math.min(pendingPartnersState.pagination.totalPages, current + 1)
-                      )
-                    }
-                    disabled={pendingPartnersPage >= pendingPartnersState.pagination.totalPages}
-                  >
-                    Próxima
-                  </Button>
-                </div>
-              </div>
-            )}
+          {pendingPartnersReportId !== 'none' && renderPendingPartnersTable()}
+          {pendingPartnersReportId !== 'none' && renderPendingPartnersPagination()}
         </section>
 
         <section className="space-y-4">
@@ -1309,55 +1384,7 @@ export default function App() {
             {vouchersState.status === 'error' && (
               <p className="text-sm text-red-600">Não foi possível carregar os vouchers.</p>
             )}
-            {vouchersState.status === 'success' && vouchersState.data.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nenhum voucher disponível.</p>
-            )}
-            {vouchersState.status === 'success' && vouchersState.data.length > 0 && (
-              <div className="overflow-x-auto rounded-lg border border-border/60">
-                <table className="min-w-full divide-y divide-border text-sm">
-                  <thead className="bg-muted/50">
-                    <tr>
-                      <th className="px-4 py-3 text-left font-medium">Código</th>
-                      <th className="px-4 py-3 text-left font-medium">Parceiro</th>
-                      <th className="px-4 py-3 text-left font-medium">Relatório</th>
-                      <th className="px-4 py-3 text-left font-medium">Emitido em</th>
-                      <th className="px-4 py-3 text-left font-medium">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border bg-background">
-                    {vouchersState.data.map((voucher) => {
-                      const status = getVoucherStatus(voucher.redeemedAt)
-
-                      return (
-                        <tr key={voucher.id} className="hover:bg-muted/30">
-                          <td className="px-4 py-3 font-medium text-foreground">{voucher.code}</td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {voucher.partner.name}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {voucher.report ? voucher.report.title : '—'}
-                          </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {formatDateTime(voucher.issuedAt)}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
-                                status.variant === 'success'
-                                  ? 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-amber-100 text-amber-800'
-                              }`}
-                            >
-                              {status.label}
-                            </span>
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            {renderVouchersTable()}
           </div>
         </section>
 
