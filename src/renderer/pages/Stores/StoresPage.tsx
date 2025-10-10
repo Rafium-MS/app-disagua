@@ -1,455 +1,469 @@
-import { useMemo, useState } from 'react'
-import { Download, Link2, Plus } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Building2, RefreshCw, Upload, Search } from 'lucide-react'
 
-import { DataTable, type ColumnConfig } from '@/components/DataTable'
-import { DrawerForm } from '@/components/DrawerForm'
-import { EmptyState } from '@/components/EmptyState'
-import { FilterBar, FilterSelect } from '@/components/FilterBar'
-import { StatusBadge } from '@/components/StatusBadge'
-import type { RouteComponentProps } from '@/types/router'
-import { partnersSeed } from '@/hooks/usePartners'
-import { storesSeed, type Store, type StoreStatus } from '@/hooks/useStores'
-import { StoreForm, type StoreFormSubmitValues } from './StoreForm'
-import { Dialog } from '@/components/ui/dialog'
-import { brlToCents, centsToBRL } from '@shared/store-utils'
+import { Button } from '@/components/ui/button'
+import { useNavigate } from '@/routes/RouterProvider'
+import { useToast } from '@/components/ui/toast'
 import type { StoreProductType } from '@shared/store-utils'
+import { storeProductLabels } from '@shared/store-utils'
 
-const normalizeOptional = (value?: string | null) => {
+const LOCAL_STORAGE_KEY = 'stores-filters-v1'
+
+const statusLabels: Record<'ACTIVE' | 'INACTIVE', string> = {
+  ACTIVE: 'Ativa',
+  INACTIVE: 'Inativa',
+}
+
+type PartnerOption = {
+  id: number
+  name: string
+}
+
+type StoreListItem = {
+  id: string
+  name: string
+  city: string
+  state: string
+  mall?: string | null
+  status: 'ACTIVE' | 'INACTIVE'
+  externalCode?: string | null
+  cnpj?: string | null
+  updatedAt: string
+  partner?: { id: number; name: string | null } | null
+  brand?: { id: string; name: string | null } | null
+  prices: Array<{ product: StoreProductType; unitCents: number }>
+}
+
+type Pagination = {
+  page: number
+  pageSize: number
+  total: number
+  totalPages: number
+}
+
+type FiltersState = {
+  partnerId: string
+  brandId: string
+  city: string
+  state: string
+  mall: string
+  status: 'ALL' | 'ACTIVE' | 'INACTIVE'
+  q: string
+  page: number
+}
+
+const initialFilters: FiltersState = {
+  partnerId: '',
+  brandId: '',
+  city: '',
+  state: '',
+  mall: '',
+  status: 'ALL',
+  q: '',
+  page: 1,
+}
+
+function formatCurrency(value?: number | null) {
   if (value == null) {
-    return null
-  }
-
-  const trimmed = value.trim()
-  return trimmed.length > 0 ? trimmed : null
-}
-
-const statusTone: Record<StoreStatus, 'emerald' | 'slate'> = {
-  ACTIVE: 'emerald',
-  INACTIVE: 'slate',
-}
-
-const primaryProduct: StoreProductType = 'GALAO_20L'
-
-const formatPrimaryPrice = (prices: Store['prices']) => {
-  const primary = prices.find((price) => price.product === primaryProduct) ?? prices[0]
-  if (!primary) {
     return '—'
   }
-  const formatted = centsToBRL(primary.unitValueCents)
-  return formatted || '—'
+  return (value / 100).toLocaleString('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+    minimumFractionDigits: 2,
+  })
 }
 
-export function StoresPage({ query }: RouteComponentProps) {
-  const [stores, setStores] = useState<Store[]>(storesSeed)
-  const [filters, setFilters] = useState({
-    partnerId: query.get('partner') ?? 'all',
-    city: '',
-    state: 'all',
-    status: 'all' as 'all' | StoreStatus,
-    search: '',
+function getPrimaryPrice(prices: StoreListItem['prices']) {
+  const priority: StoreProductType[] = ['GALAO_20L', 'GALAO_10L', 'PET_1500ML', 'CAIXA_COPO', 'VASILHAME']
+  for (const product of priority) {
+    const match = prices.find((price) => price.product === product)
+    if (match) {
+      return `${storeProductLabels[product]} · ${formatCurrency(match.unitCents)}`
+    }
+  }
+  return prices.length > 0 ? `${storeProductLabels[prices[0].product]} · ${formatCurrency(prices[0].unitCents)}` : '—'
+}
+
+export function StoresPage() {
+  const navigate = useNavigate()
+  const { toast } = useToast()
+  const [stores, setStores] = useState<StoreListItem[]>([])
+  const [partners, setPartners] = useState<PartnerOption[]>([])
+  const [brands, setBrands] = useState<{ id: string; name: string }[]>([])
+  const [filters, setFilters] = useState<FiltersState>(() => {
+    if (typeof window === 'undefined') {
+      return initialFilters
+    }
+    try {
+      const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY)
+      if (!stored) return initialFilters
+      const parsed = JSON.parse(stored)
+      return { ...initialFilters, ...parsed }
+    } catch (error) {
+      console.warn('Não foi possível restaurar filtros salvos', error)
+      return initialFilters
+    }
   })
-  const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [drawerOpen, setDrawerOpen] = useState(false)
-  const [editingStore, setEditingStore] = useState<Store | null>(null)
-  const [linkOpen, setLinkOpen] = useState(false)
+  const [pagination, setPagination] = useState<Pagination>({ page: 1, pageSize: 20, total: 0, totalPages: 0 })
+  const [loading, setLoading] = useState(false)
+  const [brandsLoading, setBrandsLoading] = useState(false)
 
-  const filteredStores = useMemo(() => {
-    const normalizedSearch = filters.search.trim().toLowerCase()
+  useEffect(() => {
+    async function loadPartners() {
+      try {
+        const response = await fetch('/api/partners?page=1&pageSize=200')
+        if (!response.ok) throw new Error('Erro ao carregar parceiros')
+        const payload = await response.json()
+        setPartners(payload.data ?? [])
+      } catch (error) {
+        console.error(error)
+        toast({ title: 'Erro ao carregar parceiros', variant: 'error' })
+      }
+    }
+    loadPartners()
+  }, [toast])
 
-    return stores.filter((store) => {
-      if (filters.partnerId !== 'all' && store.partnerId !== filters.partnerId) {
-        return false
-      }
-      if (filters.city && !store.city.toLowerCase().includes(filters.city.toLowerCase())) {
-        return false
-      }
-      if (filters.state !== 'all' && store.state !== filters.state) {
-        return false
-      }
-      if (filters.status !== 'all' && store.status !== filters.status) {
-        return false
-      }
-      if (normalizedSearch.length > 0) {
-        const matches = [
-          store.name,
-          store.externalCode ?? '',
-          store.addressRaw,
-          store.partnerName,
-        ]
-          .filter(Boolean)
-          .some((value) => value.toLowerCase().includes(normalizedSearch))
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ ...filters, page: filters.page }))
+  }, [filters])
 
-        if (!matches) {
-          return false
+  useEffect(() => {
+    if (!filters.partnerId) {
+      setBrands([])
+      return
+    }
+    const controller = new AbortController()
+    async function loadBrands() {
+      setBrandsLoading(true)
+      try {
+        const params = new URLSearchParams({ partnerId: filters.partnerId, pageSize: '200' })
+        const response = await fetch(`/api/brands?${params.toString()}`, { signal: controller.signal })
+        if (!response.ok) throw new Error('Falha ao carregar marcas')
+        const payload = await response.json()
+        setBrands(payload.data ?? [])
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error(error)
+          toast({ title: 'Erro ao carregar marcas', variant: 'error' })
         }
+      } finally {
+        setBrandsLoading(false)
       }
+    }
+    loadBrands()
+    return () => controller.abort()
+  }, [filters.partnerId, toast])
 
-      return true
+  useEffect(() => {
+    const controller = new AbortController()
+    async function loadStores() {
+      setLoading(true)
+      try {
+        const params = new URLSearchParams({
+          page: String(filters.page),
+          pageSize: '20',
+        })
+        if (filters.partnerId) params.set('partnerId', filters.partnerId)
+        if (filters.brandId) params.set('brandId', filters.brandId)
+        if (filters.city) params.set('city', filters.city)
+        if (filters.state) params.set('state', filters.state.toUpperCase())
+        if (filters.mall) params.set('mall', filters.mall)
+        if (filters.status !== 'ALL') params.set('status', filters.status)
+        if (filters.q) params.set('q', filters.q)
+
+        const response = await fetch(`/api/stores?${params.toString()}`, { signal: controller.signal })
+        if (!response.ok) throw new Error('Erro ao carregar lojas')
+        const payload = await response.json()
+        setStores(payload.data ?? [])
+        setPagination(payload.pagination ?? { page: filters.page, pageSize: 20, total: 0, totalPages: 0 })
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error(error)
+          toast({ title: 'Erro ao carregar lojas', variant: 'error' })
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    loadStores()
+    return () => controller.abort()
+  }, [filters, toast])
+
+  const brandOptions = useMemo(() => [{ id: '', name: 'Todas' }, ...brands], [brands])
+
+  const handleFilterChange = (patch: Partial<FiltersState>) => {
+    setFilters((previous) => {
+      const next = { ...previous, ...patch }
+      if (!('page' in patch)) {
+        next.page = 1
+      }
+      return next
     })
-  }, [stores, filters])
-
-  const columns: ColumnConfig<Store>[] = [
-    {
-      key: 'name',
-      header: 'Loja',
-      sortable: true,
-      render: (store) => (
-        <div className="flex flex-col">
-          <span className="font-semibold text-slate-200">{store.name}</span>
-          <span className="text-xs text-slate-400">{store.externalCode ?? '—'}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'partnerName',
-      header: 'Parceiro',
-      render: (store) => <span className="text-sm text-slate-200">{store.partnerName || '—'}</span>,
-    },
-    {
-      key: 'city',
-      header: 'Município / UF',
-      render: (store) => (
-        <div className="flex flex-col text-sm">
-          <span className="text-slate-200">{store.city}</span>
-          <span className="text-xs text-slate-400">{store.state}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'prices',
-      header: 'Preço (20L)',
-      render: (store) => <span className="text-sm text-slate-200">{formatPrimaryPrice(store.prices)}</span>,
-    },
-    {
-      key: 'vouchersCount',
-      header: 'Vouchers',
-      render: (store) => <span className="text-sm text-slate-200">{store.vouchersCount}</span>,
-    },
-    {
-      key: 'status',
-      header: 'Status',
-      render: (store) => (
-        <StatusBadge
-          status={store.status === 'ACTIVE' ? 'Ativa' : 'Inativa'}
-          tone={statusTone[store.status]}
-        />
-      ),
-    },
-    {
-      key: 'actions',
-      header: 'Ações',
-      render: (store) => (
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              setEditingStore(store)
-              setDrawerOpen(true)
-            }}
-            className="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-emerald-300"
-          >
-            Editar
-          </button>
-          <button
-            type="button"
-            onClick={() => setLinkOpen(true)}
-            className="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-slate-500"
-          >
-            Mover de parceiro
-          </button>
-          <button
-            type="button"
-            onClick={() => toggleStatus(store.id)}
-            className="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-amber-300"
-          >
-            {store.status === 'ACTIVE' ? 'Desativar' : 'Ativar'}
-          </button>
-        </div>
-      ),
-    },
-  ]
-
-  const toggleStatus = (storeId: string) => {
-    setStores((previous) =>
-      previous.map((store) =>
-        store.id === storeId
-          ? {
-              ...store,
-              status: store.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
-            }
-          : store,
-      ),
-    )
   }
 
-  const handleSaveStore = (values: StoreFormSubmitValues) => {
-    const partnerName = values.partnerId
-      ? partnersSeed.find((partner) => partner.id === values.partnerId)?.name ?? '—'
-      : '—'
-
-    const normalizedPrices = values.prices
-      .map((price) => {
-        const cents = brlToCents(price.unitValueBRL)
-        if (cents == null) {
-          return null
-        }
-        return {
-          product: price.product,
-          unitValueCents: cents,
-        }
-      })
-      .filter((price): price is { product: StoreProductType; unitValueCents: number } => price !== null)
-
-    const normalized = {
-      partnerId: values.partnerId,
-      partnerName,
-      name: values.name.trim(),
-      externalCode: normalizeOptional(values.externalCode),
-      addressRaw: values.addressRaw.trim(),
-      street: normalizeOptional(values.street),
-      number: normalizeOptional(values.number),
-      complement: normalizeOptional(values.complement),
-      district: normalizeOptional(values.district),
-      city: values.city.trim(),
-      state: values.state,
-      postalCode: normalizeOptional(values.postalCode),
-      prices: normalizedPrices,
-      status: values.status,
-    }
-
-    if (editingStore) {
-      setStores((previous) =>
-        previous.map((store) =>
-          store.id === editingStore.id
-            ? {
-                ...store,
-                ...normalized,
-              }
-            : store,
-        ),
-      )
-    } else {
-      setStores((previous) => [
-        ...previous,
-        {
-          id: crypto.randomUUID(),
-          ...normalized,
-          lastVoucher: null,
-          vouchersCount: 0,
-        },
-      ])
-    }
-
-    setDrawerOpen(false)
-    setEditingStore(null)
+  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    const formData = new FormData(event.currentTarget)
+    const q = String(formData.get('search') ?? '')
+    handleFilterChange({ q })
   }
 
-  const handleBulkLink = () => {
-    setLinkOpen(true)
-  }
-
-  const handleExport = () => {
-    const header = 'Loja,Código,Parceiro,Município,UF,Preço (20L),Status\n'
-    const csv =
-      header +
-      filteredStores
-        .map((store) =>
-          [
-            store.name,
-            store.externalCode ?? '',
-            store.partnerName,
-            store.city,
-            store.state,
-            formatPrimaryPrice(store.prices),
-            store.status,
-          ].join(','),
-        )
-        .join('\n')
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.setAttribute('download', 'lojas.csv')
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+  const handleRefresh = () => {
+    setFilters((previous) => ({ ...previous }))
   }
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-xl font-semibold text-slate-100">Lojas</h1>
-          <p className="text-sm text-slate-400">
-            Cadastre pontos de coleta vinculados às marcas para acompanhar comprovantes e relatórios.
+          <h1 className="text-xl font-semibold text-fg">Lojas</h1>
+          <p className="text-sm text-fg/60">
+            Cadastre e acompanhe os pontos de venda vinculados aos parceiros para controlar preços e comprovantes.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setDrawerOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow hover:bg-emerald-400"
-          >
-            <Plus className="h-4 w-4" /> Nova loja
-          </button>
-          <button
-            type="button"
-            onClick={handleBulkLink}
-            disabled={selectedIds.length === 0}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <Link2 className="h-4 w-4" /> Vincular a relatório
-          </button>
-          <button
-            type="button"
-            onClick={handleExport}
-            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500"
-          >
-            <Download className="h-4 w-4" /> Exportar CSV
-          </button>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={handleRefresh} disabled={loading} className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4" /> Atualizar
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/stores/duplicates')} className="flex items-center gap-2">
+            <Search className="h-4 w-4" /> Duplicadas
+          </Button>
+          <Button variant="outline" onClick={() => navigate('/stores/import')} className="flex items-center gap-2">
+            <Upload className="h-4 w-4" /> Importar XLSX
+          </Button>
+          <Button onClick={() => navigate('/stores/new')} className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" /> Nova loja
+          </Button>
         </div>
       </header>
 
-      <FilterBar
-        searchPlaceholder="Buscar por nome, código ou endereço"
-        searchValue={filters.search}
-        onSearchChange={(value) => setFilters((previous) => ({ ...previous, search: value }))}
-      >
-        <FilterSelect
-          label="Parceiro"
-          value={filters.partnerId}
-          onChange={(value) => setFilters((previous) => ({ ...previous, partnerId: value }))}
-          options={[{ label: 'Todos', value: 'all' }].concat(
-            partnersSeed.map((partner) => ({ label: partner.name, value: partner.id })),
-          )}
-        />
-        <FilterSelect
-          label="UF"
-          value={filters.state}
-          onChange={(value) => setFilters((previous) => ({ ...previous, state: value }))}
-          options={['all', 'SP', 'MG', 'RJ', 'PR'].map((state) => ({
-            label: state === 'all' ? 'Todas' : state,
-            value: state,
-          }))}
-        />
-        <FilterSelect
-          label="Status"
-          value={filters.status}
-          onChange={(value) => setFilters((previous) => ({ ...previous, status: value as 'all' | StoreStatus }))}
-          options={[
-            { label: 'Todos', value: 'all' },
-            { label: 'Ativas', value: 'ACTIVE' },
-            { label: 'Inativas', value: 'INACTIVE' },
-          ]}
-        />
-      </FilterBar>
-
-      {filteredStores.length === 0 ? (
-        <EmptyState
-          title="Cadastre lojas para acompanhar comprovantes"
-          description="Crie unidades vinculadas a parceiros para distribuir tarefas de envio de comprovantes."
-          action={
-            <button
-              type="button"
-              onClick={() => setDrawerOpen(true)}
-              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow hover:bg-emerald-400"
-            >
-              Nova loja
-            </button>
-          }
-        />
-      ) : (
-        <DataTable
-          data={filteredStores}
-          columns={columns}
-          selectable
-          getRowId={(store) => store.id}
-          onSelectionChange={setSelectedIds}
-          footer={<span>{filteredStores.length} loja(s) encontradas</span>}
-        />
-      )}
-
-      <DrawerForm
-        open={drawerOpen}
-        onClose={() => {
-          setDrawerOpen(false)
-          setEditingStore(null)
-        }}
-        title={editingStore ? 'Editar loja' : 'Nova loja'}
-        description="Preencha os campos para cadastrar ou atualizar a unidade."
-        onSubmit={(event) => event.preventDefault()}
-        footer={null}
-        size="xl"
-      >
-        <StoreForm
-          partners={partnersSeed.map((partner) => ({ id: partner.id, name: partner.name }))}
-          defaultValues={
-            editingStore
-              ? {
-                  partnerId: editingStore.partnerId ?? undefined,
-                  name: editingStore.name,
-                  externalCode: editingStore.externalCode ?? undefined,
-                  addressRaw: editingStore.addressRaw,
-                  street: editingStore.street ?? undefined,
-                  number: editingStore.number ?? undefined,
-                  complement: editingStore.complement ?? undefined,
-                  district: editingStore.district ?? undefined,
-                  city: editingStore.city,
-                  state: editingStore.state,
-                  postalCode: editingStore.postalCode ?? undefined,
-                  status: editingStore.status,
-                  prices: editingStore.prices.map((price) => ({
-                    product: price.product,
-                    unitValueCents: price.unitValueCents,
-                  })),
-                }
-              : undefined
-          }
-          onCancel={() => {
-            setDrawerOpen(false)
-            setEditingStore(null)
-          }}
-          onSubmit={(values) => handleSaveStore(values)}
-        />
-      </DrawerForm>
-
-      <Dialog
-        open={linkOpen}
-        onClose={() => setLinkOpen(false)}
-        title="Vincular lojas a relatório"
-        description="Selecione o relatório ativo que receberá os comprovantes dessas lojas."
-        footer={
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setLinkOpen(false)}
-              className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200"
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950"
-            >
-              Vincular
-            </button>
+      <div className="rounded-xl border border-border bg-card/40 p-4">
+        <form onSubmit={handleSearchSubmit} className="flex flex-col gap-3">
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="partner" className="text-sm font-medium text-fg/80">
+                Parceiro
+              </label>
+              <select
+                id="partner"
+                value={filters.partnerId}
+                onChange={(event) => handleFilterChange({ partnerId: event.target.value, brandId: '' })}
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              >
+                <option value="">Todos</option>
+                {partners.map((partner) => (
+                  <option key={partner.id} value={partner.id}>
+                    {partner.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="brand" className="text-sm font-medium text-fg/80">
+                Marca
+              </label>
+              <select
+                id="brand"
+                value={filters.brandId}
+                onChange={(event) => handleFilterChange({ brandId: event.target.value })}
+                disabled={!filters.partnerId || brandsLoading}
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              >
+                {brandOptions.map((brand) => (
+                  <option key={brand.id} value={brand.id}>
+                    {brand.id === '' ? 'Todas' : brand.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="status" className="text-sm font-medium text-fg/80">
+                Status
+              </label>
+              <select
+                id="status"
+                value={filters.status}
+                onChange={(event) => handleFilterChange({ status: event.target.value as FiltersState['status'] })}
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              >
+                <option value="ALL">Todos</option>
+                <option value="ACTIVE">Ativas</option>
+                <option value="INACTIVE">Inativas</option>
+              </select>
+            </div>
           </div>
-        }
-      >
-        <div className="space-y-3 text-sm text-slate-300">
-          <label className="space-y-1">
-            <span className="text-xs uppercase tracking-wide text-slate-400">Relatório</span>
-            <select className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100">
-              <option value="r-001">Abril/2024 - Região Sudeste</option>
-              <option value="r-002">Março/2024 - Rede Nacional</option>
-            </select>
-          </label>
-          <p className="text-xs text-slate-400">
-            {selectedIds.length} loja(s) serão marcadas para enviar comprovantes para o relatório selecionado.
-          </p>
+          <div className="grid gap-3 md:grid-cols-4">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="city" className="text-sm font-medium text-fg/80">
+                Cidade
+              </label>
+              <input
+                id="city"
+                type="text"
+                value={filters.city}
+                onChange={(event) => handleFilterChange({ city: event.target.value })}
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg/40 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="state" className="text-sm font-medium text-fg/80">
+                UF
+              </label>
+              <input
+                id="state"
+                type="text"
+                value={filters.state}
+                maxLength={2}
+                onChange={(event) => handleFilterChange({ state: event.target.value.toUpperCase() })}
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg/40 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="mall" className="text-sm font-medium text-fg/80">
+                Shopping
+              </label>
+              <input
+                id="mall"
+                type="text"
+                value={filters.mall}
+                onChange={(event) => handleFilterChange({ mall: event.target.value })}
+                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg/40 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="search" className="text-sm font-medium text-fg/80">
+                Busca rápida
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="search"
+                  name="search"
+                  defaultValue={filters.q}
+                  placeholder="Nome, código, cidade..."
+                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg/40 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                />
+                <Button type="submit" variant="outline" className="px-3">
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-border">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-border/60 text-sm">
+            <thead className="bg-card/60 text-xs uppercase tracking-wide text-fg/60">
+              <tr>
+                <th className="px-4 py-3 text-left">Loja</th>
+                <th className="px-4 py-3 text-left">Parceiro</th>
+                <th className="px-4 py-3 text-left">Marca</th>
+                <th className="px-4 py-3 text-left">Localização</th>
+                <th className="px-4 py-3 text-left">Preço destaque</th>
+                <th className="px-4 py-3 text-left">Status</th>
+                <th className="px-4 py-3 text-left">Atualizada em</th>
+                <th className="px-4 py-3 text-left">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60 bg-card/40">
+              {stores.map((store) => (
+                <tr key={store.id}>
+                  <td className="px-4 py-3">
+                    <div className="font-medium text-fg">{store.name}</div>
+                    <div className="text-xs text-fg/60">{store.externalCode || 'Sem código externo'}</div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="text-sm text-fg">
+                      {store.partner?.name ?? '—'}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="text-sm text-fg">
+                      {store.brand?.name ?? '—'}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-fg/80">
+                    <div>
+                      {store.city}/{store.state}
+                    </div>
+                    {store.mall ? <div className="text-xs text-fg/60">{store.mall}</div> : null}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-fg/80">{getPrimaryPrice(store.prices)}</td>
+                  <td className="px-4 py-3">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+                        store.status === 'ACTIVE'
+                          ? 'bg-emerald-500/10 text-emerald-400'
+                          : 'bg-slate-500/10 text-slate-300'
+                      }`}
+                    >
+                      {statusLabels[store.status]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-sm text-fg/60">
+                    {new Date(store.updatedAt).toLocaleDateString('pt-BR')}
+                  </td>
+                  <td className="px-4 py-3 text-sm text-fg">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/stores/${store.id}/edit`)}
+                      >
+                        Editar
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {stores.length === 0 && !loading ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-fg/60">
+                    Nenhuma loja encontrada com os filtros atuais.
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
         </div>
-      </Dialog>
+        {loading ? (
+          <div className="flex items-center justify-center gap-2 py-6 text-sm text-fg/60">
+            <RefreshCw className="h-4 w-4 animate-spin" /> Carregando lojas...
+          </div>
+        ) : null}
+      </div>
+
+      <div className="flex items-center justify-between text-sm text-fg/70">
+        <div>
+          Página {pagination.page} de {pagination.totalPages || 1} • {pagination.total} lojas no total
+        </div>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handleFilterChange({ page: Math.max(1, pagination.page - 1) })}
+            disabled={loading || pagination.page <= 1}
+          >
+            Anterior
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handleFilterChange({ page: Math.min(pagination.totalPages || 1, pagination.page + 1) })}
+            disabled={loading || pagination.page >= (pagination.totalPages || 1)}
+          >
+            Próxima
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

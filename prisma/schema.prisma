@@ -7,26 +7,54 @@ datasource db {
   url      = "file:./dev.db"
 }
 
+enum StoreStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ProductType {
+  GALAO_20L
+  GALAO_10L
+  PET_1500ML
+  CAIXA_COPO
+  VASILHAME
+}
+
 model Partner {
-  id        Int       @id @default(autoincrement())
-  name      String
-  document  String    @unique
-  taxId     String?
+  id          Int       @id @default(autoincrement())
+  name        String
+  document    String    @unique
+  taxId       String?
   distributor String?
-  phone     String?
-  email     String?   @unique
-  city      String?
-  state     String?
-  paymentDay Int?
-  bankName   String?
-  bankBranch String?
+  phone       String?
+  email       String?   @unique
+  city        String?
+  state       String?
+  paymentDay  Int?
+  bankName    String?
+  bankBranch  String?
   bankAccount String?
-  pixKey     String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  reports   Report[]
-  vouchers  Voucher[]
-  stores    Store[]
+  pixKey      String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  reports     Report[]
+  vouchers    Voucher[]
+  stores      Store[]
+  brands      Brand[]
+}
+
+model Brand {
+  id        String   @id @default(cuid())
+  partnerId Int
+  partner   Partner  @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  name      String
+  code      String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stores Store[]
+
+  @@unique([partnerId, name])
 }
 
 model Report {
@@ -77,11 +105,18 @@ model AuditLog {
 }
 
 model Store {
-  id             String    @id @default(cuid())
-  partnerId      Int?
-  partner        Partner?  @relation(fields: [partnerId], references: [id])
+  id             String      @id @default(cuid())
+  partnerId      Int
+  partner        Partner     @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  brandId        String?
+  brand          Brand?      @relation(fields: [brandId], references: [id])
   name           String
-  externalCode   String?   @unique
+  normalizedName String
+  externalCode   String?     @unique
+  cnpj           String?     @unique
+  phone          String?
+  email          String?
+  mall           String?
   addressRaw     String
   street         String?
   number         String?
@@ -90,22 +125,21 @@ model Store {
   city           String
   state          String
   postalCode     String?
-  geoLat         Decimal?
-  geoLng         Decimal?
-  status         String    @default("ACTIVE")
+  status         StoreStatus @default(ACTIVE)
   prices         StorePrice[]
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
   vouchers       Voucher[]
 
-  @@index([partnerId])
+  @@index([partnerId, brandId])
+  @@unique([partnerId, brandId, normalizedName, city, mall])
 }
 
 model StorePrice {
   id        String   @id @default(cuid())
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product   String
+  product   ProductType
   unitCents Int
 
   @@unique([storeId, product])
