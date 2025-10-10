@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { clsx } from 'clsx'
 import { routeDefinitions } from '@/routes/appRoutes'
 import { useNavigate, useRouteInfo } from '@/routes/RouterProvider'
+import { useAuth } from '@/hooks/useAuth'
 
 type AppSidebarProps = {
   onNavigate?: () => void
@@ -11,10 +12,20 @@ type AppSidebarProps = {
 export function AppSidebar({ onNavigate, className }: AppSidebarProps) {
   const { path } = useRouteInfo()
   const navigate = useNavigate()
+  const { hasRole } = useAuth()
 
   const items = useMemo(
-    () => routeDefinitions.filter((route) => route.sidebar),
-    [],
+    () =>
+      routeDefinitions.filter((route) => {
+        if (!route.sidebar) {
+          return false
+        }
+        if (!route.requiredRoles) {
+          return true
+        }
+        return hasRole(...route.requiredRoles)
+      }),
+    [hasRole],
   )
 
   return (

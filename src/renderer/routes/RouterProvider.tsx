@@ -16,6 +16,8 @@ import { LoadingView } from '@/components/layout/LoadingView'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { ThemeProvider } from '@/theme/ThemeProvider'
 import { NotFoundPage } from '@/pages/NotFoundPage'
+import { useAuth } from '@/hooks/useAuth'
+import { ProfileMenu } from '@/components/ProfileMenu'
 
 export type RouterMatch = {
   route: RouteDefinition
@@ -92,18 +94,18 @@ type RouterProviderProps = {
 export function RouterProvider({ children }: RouterProviderProps) {
   const [{ path, query }, setLocation] = useState(() => {
     if (typeof window === 'undefined') {
-      return { path: '/partners', query: new URLSearchParams() }
+      return { path: '/login', query: new URLSearchParams() }
     }
-    const parsed = parseLocation(window.location.hash || '#/partners')
+    const parsed = parseLocation(window.location.hash || '#/login')
     if (!window.location.hash) {
-      window.location.hash = '#/partners'
+      window.location.hash = '#/login'
     }
     return parsed
   })
 
   useEffect(() => {
     const handler = () => {
-      setLocation(parseLocation(window.location.hash || '#/partners'))
+      setLocation(parseLocation(window.location.hash || '#/login'))
     }
 
     window.addEventListener('hashchange', handler)
@@ -131,6 +133,31 @@ export function RouterProvider({ children }: RouterProviderProps) {
     [path, query, navigate, activeRoute, params],
   )
 
+  const { user, loading, hasRole } = useAuth()
+
+  useEffect(() => {
+    if (!match) {
+      return
+    }
+    if (loading) {
+      return
+    }
+    const route = match.route
+    if (route.requiresAuth === false) {
+      if (route.path === '/login' && user) {
+        navigate('/partners', { replace: true })
+      }
+      return
+    }
+    if (!user) {
+      navigate('/login', { replace: true })
+      return
+    }
+    if (route.requiredRoles && !hasRole(...route.requiredRoles)) {
+      navigate('/partners', { replace: true })
+    }
+  }, [match, user, loading, hasRole, navigate])
+
   let content: ReactNode = children
   if (!content && match) {
     const RouteComponent = match.route.component
@@ -151,10 +178,45 @@ export function RouterProvider({ children }: RouterProviderProps) {
     content = <NotFoundPage navigate={navigate} />
   }
 
+  const requiresAuth = match?.route.requiresAuth !== false
+  const requiredRoles = match?.route.requiredRoles
+
+  if (requiresAuth) {
+    if (loading) {
+      content = <LoadingView message="Validando sessão" />
+    } else if (!user) {
+      content = null
+    } else if (requiredRoles && !hasRole(...requiredRoles)) {
+      content = (
+        <div className="p-6">
+          <div className="mx-auto max-w-xl rounded-lg border border-border bg-card p-6 text-center">
+            <h2 className="text-lg font-semibold text-fg">Acesso restrito</h2>
+            <p className="mt-2 text-sm text-fg/70">
+              Você não possui permissões suficientes para visualizar esta página.
+            </p>
+          </div>
+        </div>
+      )
+    }
+  }
+
   return (
     <ThemeProvider>
       <RouterContext.Provider value={value}>
-        <AppLayout topRight={<ThemeToggle />}>{content}</AppLayout>
+        {requiresAuth ? (
+          <AppLayout
+            topRight={
+              <div className="flex items-center gap-2">
+                <ThemeToggle />
+                <ProfileMenu />
+              </div>
+            }
+          >
+            {content}
+          </AppLayout>
+        ) : (
+          content
+        )}
       </RouterContext.Provider>
     </ThemeProvider>
   )

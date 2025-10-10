@@ -1,8 +1,49 @@
 import { PrismaClient } from '@prisma/client'
+import { hashPassword } from '../src/server/security/password'
+import { USER_ROLES } from '../src/shared/auth'
 
 const prisma = new PrismaClient()
 
 async function main() {
+  for (const roleName of USER_ROLES) {
+    await prisma.role.upsert({
+      where: { name: roleName },
+      update: {},
+      create: { name: roleName },
+    })
+  }
+
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@local'
+  const adminPassword = process.env.ADMIN_PASSWORD || 'admin123'
+  const adminPasswordHash = await hashPassword(adminPassword)
+
+  const adminUser = await prisma.user.upsert({
+    where: { email: adminEmail },
+    update: {
+      name: 'Administrador',
+      passwordHash: adminPasswordHash,
+      status: 'ACTIVE',
+    },
+    create: {
+      email: adminEmail,
+      name: 'Administrador',
+      passwordHash: adminPasswordHash,
+      status: 'ACTIVE',
+      roles: {
+        create: [{ role: { connect: { name: 'ADMIN' } } }],
+      },
+    },
+  })
+
+  const adminRole = await prisma.role.findUnique({ where: { name: 'ADMIN' } })
+  if (adminRole) {
+    await prisma.userRole.upsert({
+      where: { userId_roleId: { userId: adminUser.id, roleId: adminRole.id } },
+      update: {},
+      create: { userId: adminUser.id, roleId: adminRole.id },
+    })
+  }
+
   const partnersData = [
     { name: 'Aquatech Solutions', document: '12345678901', email: 'contato@aquatech.com' },
     { name: 'EcoFlux Engenharia', document: '98765432100', email: 'parcerias@ecoflux.com' },
