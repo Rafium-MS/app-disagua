@@ -1,7 +1,7 @@
 import { lazy } from 'react'
 import type { LazyExoticComponent } from 'react'
 import type { RouteComponentProps } from '../types/router'
-import { Building2, FileSpreadsheet, Layers, Users2 } from 'lucide-react'
+import { BarChart3, Building2, FileSpreadsheet, Layers, Users2 } from 'lucide-react'
 
 export type RouteComponent = LazyExoticComponent<(
   props: RouteComponentProps,
@@ -50,6 +50,17 @@ export const routeDefinitions: RouteDefinition[] = [
     component: lazy(() => import('../pages/Reports/ReportsListPage').then((module) => ({
       default: module.ReportsListPage,
     }))),
+    sidebar: true,
+  },
+  {
+    path: '/reports/partners-monthly',
+    label: 'Resumo mensal',
+    icon: BarChart3,
+    component: lazy(() =>
+      import('../pages/Reports/PartnersMonthlyReportPage').then((module) => ({
+        default: module.default,
+      }))
+    ),
     sidebar: true,
   },
   {
