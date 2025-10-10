@@ -6,7 +6,7 @@
   "main": "electron/main.ts",
   "scripts": {
     "dev": "concurrently -k -n VITE,ELECTRON \"vite\" \"wait-on tcp:5173 && electron electron/dev-main.cjs\"",
-    "server": "ts-node --transpile-only src/server/index.ts",
+    "server": "tsx src/server/index.ts",
     "migrate": "prisma migrate dev --skip-generate --skip-seed",
     "seed": "npm run migrate && prisma db seed",
     "db:setup": "npm run migrate && prisma db seed",
