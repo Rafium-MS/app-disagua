@@ -16,18 +16,20 @@ export function FilterBar({
   actions,
 }: FilterBarProps) {
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-      <div className="flex flex-wrap items-center gap-3">
+    <div className="flex flex-col gap-4 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
         {onSearchChange && (
           <input
             value={searchValue}
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder={searchPlaceholder}
-            className="min-w-[220px] flex-1 rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+            className="w-full min-w-0 rounded-lg border border-slate-800 bg-slate-950/80 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
           />
         )}
-        <div className="flex flex-wrap items-center gap-3">{children}</div>
-        <div className="ml-auto flex items-center gap-2">{actions}</div>
+        <div className="flex flex-wrap items-center gap-2 lg:flex-1">{children}</div>
+        <div className="flex w-full flex-wrap items-center gap-2 lg:ml-auto lg:w-auto lg:justify-end">
+          {actions}
+        </div>
       </div>
     </div>
   )

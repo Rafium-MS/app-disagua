@@ -188,19 +188,19 @@ export function PartnersPage({ navigate, query }: RouteComponentProps) {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-4">
-          <div>
+      <header className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-6">
+          <div className="space-y-1">
             <h1 className="text-2xl font-semibold text-slate-100">Parceiros</h1>
             <p className="text-sm text-slate-400">
               Centralize o cadastro e acompanhe pendências por parceiro.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end md:w-auto">
             <button
               type="button"
               onClick={() => setImportOpen(true)}
-              className="hidden items-center gap-2 rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-emerald-400 lg:flex"
+              className="flex items-center justify-center gap-2 rounded-lg border border-slate-700 px-4 py-2 text-sm font-medium text-slate-200 transition hover:border-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 sm:w-auto"
             >
               <FileSpreadsheet className="h-4 w-4" /> Importar CSV
             </button>
@@ -210,7 +210,7 @@ export function PartnersPage({ navigate, query }: RouteComponentProps) {
                 setEditingPartner(null)
                 setDrawerOpen(true)
               }}
-              className="flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow hover:bg-emerald-400"
+              className="flex items-center justify-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow transition hover:bg-emerald-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 sm:w-auto"
             >
               <Plus className="h-4 w-4" /> Novo Parceiro
             </button>

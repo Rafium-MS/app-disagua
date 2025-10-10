@@ -155,87 +155,102 @@ export function DataTable<T>({
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60">
-      <table className="min-w-full divide-y divide-slate-800 text-sm">
-        <thead className="bg-slate-900/80 text-left text-xs uppercase tracking-wide text-slate-500">
-          <tr>
-            {selectable && (
-              <th className="w-10 px-4 py-3">
-                <input
-                  type="checkbox"
-                  onChange={toggleAll}
-                  checked={pageData.length > 0 && pageData.every((row, index) => selected.has(resolvedGetRowId(row, currentPage * pageSize + index)))}
-                />
-              </th>
-            )}
-            {columns.map((column) => {
-              const isSorted = sort?.key === column.key
-              return (
-                <th
-                  key={column.key}
-                  style={{ width: column.width }}
-                  className={clsx('px-4 py-3 font-semibold text-slate-300', column.align === 'right' && 'text-right')}
-                >
-                  <button
-                    type="button"
-                    className={clsx('flex items-center gap-1 text-xs uppercase tracking-wide',
-                      column.sortable ? 'cursor-pointer select-none text-slate-300' : 'text-slate-400')}
-                    onClick={() => handleHeaderClick(column)}
-                  >
-                    {column.header}
-                    {column.sortable && isSorted && (sort?.direction === 'asc' ? (
-                      <ArrowUp className="h-3 w-3" />
-                    ) : (
-                      <ArrowDown className="h-3 w-3" />
-                    ))}
-                  </button>
+    <div className="flex flex-col overflow-hidden rounded-xl border border-slate-800 bg-slate-900/60">
+      <div className="w-full overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-800 text-xs sm:text-sm">
+          <thead className="bg-slate-900/80 text-left text-[0.65rem] uppercase tracking-wide text-slate-500 sm:text-xs">
+            <tr>
+              {selectable && (
+                <th className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    onChange={toggleAll}
+                    checked={
+                      pageData.length > 0 &&
+                      pageData.every((row, index) =>
+                        selected.has(resolvedGetRowId(row, currentPage * pageSize + index)),
+                      )
+                    }
+                  />
                 </th>
+              )}
+              {columns.map((column) => {
+                const isSorted = sort?.key === column.key
+                return (
+                  <th
+                    key={column.key}
+                    style={{ width: column.width }}
+                    className={clsx('px-4 py-3 font-semibold text-slate-300', column.align === 'right' && 'text-right')}
+                  >
+                    <button
+                      type="button"
+                      className={clsx(
+                        'flex items-center gap-1 text-xs uppercase tracking-wide',
+                        column.sortable ? 'cursor-pointer select-none text-slate-300' : 'text-slate-400',
+                      )}
+                      onClick={() => handleHeaderClick(column)}
+                    >
+                      {column.header}
+                      {column.sortable && isSorted && (sort?.direction === 'asc' ? (
+                        <ArrowUp className="h-3 w-3" />
+                      ) : (
+                        <ArrowDown className="h-3 w-3" />
+                      ))}
+                    </button>
+                  </th>
+                )
+              })}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800 text-xs text-slate-200 sm:text-sm">
+            {pageData.length === 0 && (
+              <tr>
+                <td
+                  colSpan={columns.length + (selectable ? 1 : 0)}
+                  className="px-6 py-12 text-center text-sm text-slate-500"
+                >
+                  {emptyMessage}
+                </td>
+              </tr>
+            )}
+            {pageData.map((row, index) => {
+              const rowId = resolvedGetRowId(row, currentPage * pageSize + index)
+              const isSelected = selected.has(rowId)
+              return (
+                <tr key={rowId} className={clsx(isSelected && 'bg-emerald-500/5')}>
+                  {selectable && (
+                    <td className="px-4 py-3">
+                      <input type="checkbox" checked={isSelected} onChange={() => toggleRow(rowId)} />
+                    </td>
+                  )}
+                  {columns.map((column) => {
+                    const align = column.align ?? 'left'
+                    const accessor = column.accessor ?? ((item: T) => defaultAccessor(item, column.key))
+                    const content = column.render ? column.render(row) : accessor(row)
+                    return (
+                      <td
+                        key={column.key}
+                        className={clsx('px-4 py-3', align === 'right' && 'text-right', align === 'center' && 'text-center')}
+                      >
+                        {content}
+                      </td>
+                    )
+                  })}
+                </tr>
               )
             })}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-800 text-sm text-slate-200">
-          {pageData.length === 0 && (
-            <tr>
-              <td colSpan={columns.length + (selectable ? 1 : 0)} className="px-6 py-12 text-center text-sm text-slate-500">
-                {emptyMessage}
-              </td>
-            </tr>
-          )}
-          {pageData.map((row, index) => {
-            const rowId = resolvedGetRowId(row, currentPage * pageSize + index)
-            const isSelected = selected.has(rowId)
-            return (
-              <tr key={rowId} className={clsx(isSelected && 'bg-emerald-500/5')}>
-                {selectable && (
-                  <td className="px-4 py-3">
-                    <input type="checkbox" checked={isSelected} onChange={() => toggleRow(rowId)} />
-                  </td>
-                )}
-                {columns.map((column) => {
-                  const align = column.align ?? 'left'
-                  const accessor = column.accessor ?? ((item: T) => defaultAccessor(item, column.key))
-                  const content = column.render ? column.render(row) : accessor(row)
-                  return (
-                    <td key={column.key} className={clsx('px-4 py-3', align === 'right' && 'text-right', align === 'center' && 'text-center')}>
-                      {content}
-                    </td>
-                  )
-                })}
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      <div className="flex items-center justify-between border-t border-slate-800 bg-slate-950/40 px-4 py-3 text-xs text-slate-500">
+          </tbody>
+        </table>
+      </div>
+      <div className="flex flex-col gap-3 border-t border-slate-800 bg-slate-950/40 px-4 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
         <span>
           Página {currentPage + 1} de {totalPages}
         </span>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-end gap-1">
           <button
             type="button"
             onClick={() => setPage((value) => Math.max(0, value - 1))}
-            className="rounded border border-slate-700 p-1 text-slate-300 disabled:opacity-40"
+            className="rounded border border-slate-700 p-1 text-slate-300 transition hover:border-emerald-400 hover:text-emerald-200 disabled:opacity-40"
             disabled={currentPage === 0}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -243,14 +258,18 @@ export function DataTable<T>({
           <button
             type="button"
             onClick={() => setPage((value) => Math.min(totalPages - 1, value + 1))}
-            className="rounded border border-slate-700 p-1 text-slate-300 disabled:opacity-40"
+            className="rounded border border-slate-700 p-1 text-slate-300 transition hover:border-emerald-400 hover:text-emerald-200 disabled:opacity-40"
             disabled={currentPage === totalPages - 1}
           >
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
       </div>
-      {footer && <div className="border-t border-slate-800 bg-slate-950/30 p-4 text-xs text-slate-400">{footer}</div>}
+      {footer && (
+        <div className="border-t border-slate-800 bg-slate-950/30 p-4 text-xs text-slate-400">
+          {footer}
+        </div>
+      )}
     </div>
   )
 }
