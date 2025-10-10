@@ -8,6 +8,23 @@ Projeto base com:
 - Tailwind CSS + shadcn/ui (UI)
 - Vitest (testes)
 
+## Sumário
+
+- [Requisitos](#requisitos)
+- [Instalação](#instalação)
+- [Configuração de ambiente](#configuração-de-ambiente)
+- [Scripts](#scripts)
+- [Importação e deduplicação de lojas](#importação-e-deduplicação-de-lojas)
+  - [Importar XLSX pela API/UI](#importar-xlsx-pela-apiui)
+  - [Importar XLSX pelo script CLI](#importar-xlsx-pelo-script-cli)
+  - [Deduplicação](#deduplicação)
+- [Rotas do servidor](#rotas-do-servidor)
+- [Auditoria e diretórios de dados](#auditoria-e-diretórios-de-dados)
+- [Estrutura](#estrutura)
+- [Tailwind + shadcn/ui](#tailwind--shadcnui)
+- [Observações de desenvolvimento](#observações-de-desenvolvimento)
+- [Testes](#testes)
+
 ## Requisitos
 
 - Node.js 18+
@@ -42,6 +59,15 @@ Projeto base com:
    ```
 
    O comando executa `npm run migrate` antes de `prisma db seed`, garantindo um schema atualizado antes de popular a base. Caso queira rodar em etapas, execute `npm run migrate` seguido de `npm run seed`.
+
+## Configuração de ambiente
+
+- `PORT`: porta usada pelo servidor Express. Por padrão é `5174` tanto para o script `npm run server` quanto para o processo principal do Electron.
+- `ELECTRON_START_URL`: URL carregada pelo Electron em produção. Útil para apontar para um build hospedado externamente.
+- `VITE_DEV_SERVER_URL`: URL alternativa utilizada durante o desenvolvimento com Vite. Geralmente não precisa ser alterada.
+- `CORS_ALLOWED_ORIGINS`: lista separada por vírgulas com as origens permitidas pelo servidor. Em desenvolvimento, se não informado, o fallback é `http://localhost:5173`. Em produção, configure explicitamente (ex.: `https://app.empresa.com,https://painel.empresa.com`).
+
+Variáveis podem ser definidas em um arquivo `.env` na raiz do projeto ou exportadas diretamente no shell antes de executar os scripts.
 
 ## Scripts
 
@@ -84,18 +110,29 @@ As rotas que criam, atualizam ou removem registros geram automaticamente entrada
 
 Servidor embutido é iniciado pelo processo principal do Electron. No modo `dev`, a UI roda em `http://localhost:5173` e o servidor em `http://localhost:5174`. Em produção, configure a variável `CORS_ALLOWED_ORIGINS` (lista separada por vírgulas) para liberar apenas origens confiáveis.
 
-### Importação e deduplicação de lojas
+## Importação e deduplicação de lojas
 
-1. **Importar XLSX**
-   - Acesse `/stores/import` na UI ou envie `POST /api/stores/import` com `multipart/form-data` contendo `file` (planilha) e `mapping` (JSON com as colunas, ex.: `{ "colPartner": "Parceiro", "colStoreName": "Nome", "colCity": "Cidade", "colState": "UF" }`).
-   - Campos opcionais incluem marca, shopping, endereço e preços (`colValue20L`, `colValue10L`, `colValue1500`, `colValueCopo`, `colValueVasilhame`).
-   - Use `allowCreateBrand=true` para criar marcas automaticamente quando inexistentes para o parceiro.
-   - Resposta retorna `{ created, updated, skipped, conflicts[] }` com detalhes de linhas ignoradas ou conflitos de unicidade.
+### Importar XLSX pela API/UI
 
-2. **Deduplicação**
-   - A UI `/stores/duplicates` consome `POST /api/stores/detect-duplicates` para listar candidatos por CNPJ ou combinação nome/cidade/mall.
-   - Acione o merge pelo botão “Mesclar registros”, que chama `POST /api/stores/merge` com `targetId`, `sourceIds[]` e `fieldsStrategy` (`target`, `source` ou `mostRecent`).
-   - Durante o merge, vouchers e preços dos registros fonte são migrados para o alvo e os duplicados são excluídos ao final da transação.
+1. Acesse `/stores/import` na UI ou envie `POST /api/stores/import` com `multipart/form-data` contendo `file` (planilha) e `mapping` (JSON com as colunas, ex.: `{ "colPartner": "Parceiro", "colStoreName": "Nome", "colCity": "Cidade", "colState": "UF" }`).
+2. Campos opcionais incluem marca, shopping, endereço e preços (`colValue20L`, `colValue10L`, `colValue1500`, `colValueCopo`, `colValueVasilhame`).
+3. Use `allowCreateBrand=true` para criar marcas automaticamente quando inexistentes para o parceiro.
+4. A resposta retorna `{ created, updated, skipped, conflicts[] }` com detalhes de linhas ignoradas ou conflitos de unicidade.
+
+### Importar XLSX pelo script CLI
+
+Para sincronizar lojas diretamente via linha de comando, utilize o script `npm run import:stores`. Ele processa `data/LISTA DE LOJAS.xlsx` (primeira aba) e executa um _upsert_ de lojas, atualizando preços relacionados.
+
+- Ajuste a planilha conforme os cabeçalhos esperados (`MARCA`, `LOJA`, `COD da Disagua`, `LOCAL DA ENTREGA`, `MUNICIPIO`, `UF`, e colunas de preço como `VALOR 20L`, `VALOR 10L`, etc.).
+- O script normaliza o endereço com `parseBrazilAddress`, atualiza marcas existentes e reescreve a tabela de preços (`storePrice`) para cada loja sincronizada.
+- Para usar outra planilha ou caminho, edite `scripts/import-stores.ts` antes da execução ou crie uma cópia do arquivo adequando os cabeçalhos.
+- O output no terminal indica cada loja criada/atualizada e reporta linhas inválidas.
+
+### Deduplicação
+
+1. A UI `/stores/duplicates` consome `POST /api/stores/detect-duplicates` para listar candidatos por CNPJ ou combinação nome/cidade/mall.
+2. Acione o merge pelo botão “Mesclar registros”, que chama `POST /api/stores/merge` com `targetId`, `sourceIds[]` e `fieldsStrategy` (`target`, `source` ou `mostRecent`).
+3. Durante o merge, vouchers e preços dos registros fonte são migrados para o alvo e os duplicados são excluídos ao final da transação.
 
 ## Auditoria e diretórios de dados
 
