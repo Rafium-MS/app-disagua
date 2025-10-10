@@ -9,6 +9,7 @@ import { vouchersRouter } from './routes/vouchers'
 import { auditLogsRouter } from './routes/audit-logs'
 import { storesRouter } from './routes/stores'
 import { buildCorsOptions } from './config/cors'
+import { analyticsRouter } from './routes/analytics'
 
 export function createApp() {
   const app = express()
@@ -21,6 +22,7 @@ export function createApp() {
     res.json({ ok: true })
   })
 
+  app.use('/api', analyticsRouter)
   app.use(['/api/partners', '/partners'], partnersRouter)
   app.use(['/api/reports', '/reports'], reportsRouter)
   app.use(['/api/vouchers', '/vouchers'], vouchersRouter)

@@ -11,7 +11,17 @@ model Partner {
   id        Int       @id @default(autoincrement())
   name      String
   document  String    @unique
+  taxId     String?
+  distributor String?
+  phone     String?
   email     String?   @unique
+  city      String?
+  state     String?
+  paymentDay Int?
+  bankName   String?
+  bankBranch String?
+  bankAccount String?
+  pixKey     String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   reports   Report[]

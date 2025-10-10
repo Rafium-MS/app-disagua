@@ -15,7 +15,8 @@ export default defineConfig({
       '@/hooks': resolve(__dirname, 'src/renderer/hooks'),
       '@/routes': resolve(__dirname, 'src/renderer/routes'),
       '@/types': resolve(__dirname, 'src/renderer/types'),
-      '@/pages': resolve(__dirname, 'src/renderer/pages')
+      '@/pages': resolve(__dirname, 'src/renderer/pages'),
+      '@shared': resolve(__dirname, 'src/shared')
     }
   },
   test: {
