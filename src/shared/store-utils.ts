@@ -1,3 +1,21 @@
+export const storeProductTypes = [
+  'GALAO_20L',
+  'GALAO_10L',
+  'PET_1500ML',
+  'CAIXA_COPO',
+  'VASILHAME',
+] as const
+
+export type StoreProductType = (typeof storeProductTypes)[number]
+
+export const storeProductLabels: Record<StoreProductType, string> = {
+  GALAO_20L: 'Galão 20L',
+  GALAO_10L: 'Galão 10L',
+  PET_1500ML: 'PET 1,5L',
+  CAIXA_COPO: 'Caixa de copo',
+  VASILHAME: 'Vasilhame',
+}
+
 export type ParsedAddress = {
   street?: string
   number?: string

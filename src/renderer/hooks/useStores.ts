@@ -1,6 +1,13 @@
 import { useMemo } from 'react'
 
+import type { StoreProductType } from '@shared/store-utils'
+
 export type StoreStatus = 'ACTIVE' | 'INACTIVE'
+
+export type StorePrice = {
+  product: StoreProductType
+  unitValueCents: number
+}
 
 export type Store = {
   id: string
@@ -16,7 +23,7 @@ export type Store = {
   city: string
   state: string
   postalCode?: string | null
-  unitValueCents: number | null
+  prices: StorePrice[]
   lastVoucher?: string | null
   vouchersCount: number
   status: StoreStatus
@@ -37,7 +44,10 @@ export const storesSeed: Store[] = [
     city: 'São Paulo',
     state: 'SP',
     postalCode: '01310000',
-    unitValueCents: 1250,
+    prices: [
+      { product: 'GALAO_20L', unitValueCents: 1250 },
+      { product: 'GALAO_10L', unitValueCents: 980 },
+    ],
     lastVoucher: '2024-08-12',
     vouchersCount: 42,
     status: 'ACTIVE',
@@ -56,7 +66,10 @@ export const storesSeed: Store[] = [
     postalCode: null,
     complement: null,
     district: null,
-    unitValueCents: 980,
+    prices: [
+      { product: 'GALAO_20L', unitValueCents: 980 },
+      { product: 'PET_1500ML', unitValueCents: 450 },
+    ],
     lastVoucher: '2024-08-05',
     vouchersCount: 28,
     status: 'ACTIVE',
@@ -75,7 +88,10 @@ export const storesSeed: Store[] = [
     state: 'RJ',
     postalCode: null,
     complement: null,
-    unitValueCents: 1435,
+    prices: [
+      { product: 'GALAO_20L', unitValueCents: 1435 },
+      { product: 'VASILHAME', unitValueCents: 3500 },
+    ],
     lastVoucher: null,
     vouchersCount: 0,
     status: 'INACTIVE',

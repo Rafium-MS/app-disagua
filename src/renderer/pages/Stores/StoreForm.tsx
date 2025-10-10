@@ -3,7 +3,14 @@ import { useForm, useWatch } from 'react-hook-form'
 import { z } from 'zod'
 
 import { zodResolver } from '@/lib/zod-resolver'
-import { parseBrazilAddress, brlToCents, centsToBRL } from '@shared/store-utils'
+import {
+  parseBrazilAddress,
+  brlToCents,
+  centsToBRL,
+  storeProductLabels,
+  storeProductTypes,
+  type StoreProductType,
+} from '@shared/store-utils'
 
 const brazilStates = [
   'AC',
@@ -35,6 +42,13 @@ const brazilStates = [
   'TO',
 ] as const
 
+const productEnum = z.enum(storeProductTypes)
+
+const priceSchema = z.object({
+  product: productEnum,
+  unitValueBRL: z.string().optional().nullable(),
+})
+
 export const storeSchema = z.object({
   partnerId: z.string().optional().nullable(),
   name: z.string().min(2, 'Nome da loja obrigatório'),
@@ -47,18 +61,37 @@ export const storeSchema = z.object({
   city: z.string().min(2, 'Município obrigatório'),
   state: z.string().length(2, 'UF com 2 letras'),
   postalCode: z.string().optional(),
-  unitValueBRL: z.string().optional(),
   status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
+  prices: z.array(priceSchema).default([]),
 })
 
 export type StoreFormValues = z.infer<typeof storeSchema>
 
-export type StoreFormSubmitValues = Omit<StoreFormValues, 'unitValueBRL'> & {
-  unitValueCents: number | null
+export type StoreFormSubmitPrice = {
+  product: StoreProductType
+  unitValueBRL: string
 }
 
+export type StoreFormSubmitValues = Omit<StoreFormValues, 'prices' | 'partnerId'> & {
+  partnerId: string | null
+  prices: StoreFormSubmitPrice[]
+}
+
+type StoreFormPriceDefaults = {
+  product: StoreProductType
+  unitValueCents?: number | null
+  unitValueBRL?: string | null
+}
+
+type StoreFormDefaults =
+  | undefined
+  | (Partial<Omit<StoreFormValues, 'prices' | 'partnerId'>> & {
+      partnerId?: string | number | null
+      prices?: StoreFormPriceDefaults[]
+    })
+
 export type StoreFormProps = {
-  defaultValues?: Partial<StoreFormValues & { unitValueCents?: number | null }>
+  defaultValues?: StoreFormDefaults
   partners: Array<{ id: string; name: string }>
   onSubmit: (values: StoreFormSubmitValues) => void
   onCancel?: () => void
@@ -66,8 +99,26 @@ export type StoreFormProps = {
 
 export function StoreForm({ defaultValues, partners, onSubmit, onCancel }: StoreFormProps) {
   const initialValues = useMemo<StoreFormValues>(() => {
+    const priceDefaults = storeProductTypes.map((product) => {
+      const existing = defaultValues?.prices?.find((price) => price.product === product)
+      const cents = existing?.unitValueCents ?? null
+      const formatted = existing?.unitValueBRL ?? (cents != null ? centsToBRL(cents) : '')
+      return {
+        product,
+        unitValueBRL: formatted ?? '',
+      }
+    })
+
+    const normalizeValue = (value?: string | number | null) => {
+      if (value == null) {
+        return ''
+      }
+      const stringValue = typeof value === 'number' ? String(value) : value
+      return stringValue?.trim?.() ?? ''
+    }
+
     return {
-      partnerId: defaultValues?.partnerId ?? '',
+      partnerId: normalizeValue(defaultValues?.partnerId),
       name: defaultValues?.name ?? '',
       externalCode: defaultValues?.externalCode ?? '',
       addressRaw: defaultValues?.addressRaw ?? '',
@@ -78,9 +129,7 @@ export function StoreForm({ defaultValues, partners, onSubmit, onCancel }: Store
       city: defaultValues?.city ?? '',
       state: defaultValues?.state ?? 'SP',
       postalCode: defaultValues?.postalCode ?? '',
-      unitValueBRL:
-        defaultValues?.unitValueBRL ??
-        (defaultValues?.unitValueCents != null ? centsToBRL(defaultValues.unitValueCents) : ''),
+      prices: priceDefaults,
       status: defaultValues?.status ?? 'ACTIVE',
     }
   }, [defaultValues])
@@ -128,19 +177,31 @@ export function StoreForm({ defaultValues, partners, onSubmit, onCancel }: Store
     }
   }, [addressRaw, getValues, setValue])
 
-  const handleCurrencyBlur = (event: FocusEvent<HTMLInputElement>) => {
+  const handleCurrencyBlur = (index: number) => (event: FocusEvent<HTMLInputElement>) => {
     const cents = brlToCents(event.target.value)
-    setValue('unitValueBRL', centsToBRL(cents ?? undefined))
+    setValue(`prices.${index}.unitValueBRL`, centsToBRL(cents ?? undefined))
   }
 
   const handleFormSubmit = handleSubmit((values) => {
-    const { unitValueBRL, partnerId, ...rest } = values
-    const unitValueCents = brlToCents(unitValueBRL)
+    const { partnerId, prices, ...rest } = values
+
+    const normalizedPrices = (prices ?? [])
+      .map((price) => {
+        const value = price.unitValueBRL?.trim()
+        if (!value) {
+          return null
+        }
+        return {
+          product: price.product,
+          unitValueBRL: value,
+        }
+      })
+      .filter((price): price is StoreFormSubmitPrice => price !== null)
 
     onSubmit({
       ...rest,
       partnerId: partnerId ? partnerId : null,
-      unitValueCents,
+      prices: normalizedPrices,
     })
   })
 
@@ -289,21 +350,33 @@ export function StoreForm({ defaultValues, partners, onSubmit, onCancel }: Store
       </section>
 
       <section className="space-y-4 rounded-lg border border-slate-800 bg-slate-950/60 p-4">
-        <header>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Financeiro</h3>
-          <p className="text-xs text-slate-400">Informe o valor unitário acordado em reais.</p>
+        <header className="space-y-1">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Preços por produto</h3>
+          <p className="text-xs text-slate-400">Preço por unidade. Preencha apenas os itens negociados.</p>
         </header>
-        <label className="space-y-2 text-sm text-slate-300">
-          <span className="font-medium text-slate-200">Valor unitário</span>
-          <input
-            {...register('unitValueBRL')}
-            onBlur={handleCurrencyBlur}
-            inputMode="decimal"
-            placeholder="R$ 0,00"
-            className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
-          />
-          {errors.unitValueBRL && <p className="text-xs text-rose-300">{errors.unitValueBRL.message}</p>}
-        </label>
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {storeProductTypes.map((product, index) => (
+            <label key={product} className="space-y-2 text-sm text-slate-300">
+              <span className="font-medium text-slate-200">{storeProductLabels[product]}</span>
+              <input
+                type="hidden"
+                value={product}
+                readOnly
+                {...register(`prices.${index}.product` as const)}
+              />
+              <input
+                {...register(`prices.${index}.unitValueBRL` as const)}
+                onBlur={handleCurrencyBlur(index)}
+                inputMode="decimal"
+                placeholder="R$ 0,00"
+                className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
+              />
+              {errors.prices?.[index]?.unitValueBRL && (
+                <p className="text-xs text-rose-300">{errors.prices[index]?.unitValueBRL?.message}</p>
+              )}
+            </label>
+          ))}
+        </div>
       </section>
 
       <div className="flex items-center justify-end gap-3">

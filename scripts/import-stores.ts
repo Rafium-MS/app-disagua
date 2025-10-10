@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client'
 import xlsx from 'xlsx'
 
 import { brlToCents, parseBrazilAddress } from '../src/shared/store-utils'
+import type { StoreProductType } from '../src/shared/store-utils'
 
 const prisma = new PrismaClient()
 
@@ -23,7 +24,12 @@ async function main() {
     const endereco = String(row['LOCAL DA ENTREGA'] ?? '').trim()
     const municipio = String(row['MUNICIPIO'] ?? '').trim()
     const uf = String(row['UF'] ?? '').trim().slice(0, 2).toUpperCase()
-    const valorUnitario = brlToCents(row['VALOR UN.'] as string | number | null)
+    const valorUn = row['VALOR UN.']
+    const p20 = row['VALOR 20L'] ?? row['20L'] ?? null
+    const p10 = row['VALOR 10L'] ?? row['10L'] ?? null
+    const p15 = row['VALOR 1500ML'] ?? row['1,5L'] ?? row['1.5L'] ?? null
+    const pCopo = row['VALOR COPO'] ?? row['CAIXA DE COPO'] ?? null
+    const pVasilhame = row['VALOR VASILHAME'] ?? null
 
     if (!loja || !endereco || !municipio || !uf) {
       console.warn(`Pulando linha inválida: ${JSON.stringify({ marca, loja, endereco, municipio, uf })}`)
@@ -34,7 +40,7 @@ async function main() {
     const parsed = parseBrazilAddress(endereco)
     const externalCode = codigo || `${marca}:${loja}`
 
-    await prisma.store.upsert({
+    const store = await prisma.store.upsert({
       where: { externalCode },
       update: {
         name: loja,
@@ -47,7 +53,6 @@ async function main() {
         city: municipio,
         state: uf,
         postalCode: parsed.postalCode ?? null,
-        unitValueCents: valorUnitario,
         status: 'ACTIVE',
       },
       create: {
@@ -62,10 +67,36 @@ async function main() {
         city: municipio,
         state: uf,
         postalCode: parsed.postalCode ?? null,
-        unitValueCents: valorUnitario,
         status: 'ACTIVE',
       },
     })
+
+    const pricePairs: Array<{ product: StoreProductType; unitCents: number }> = []
+
+    function pushPrice(product: StoreProductType, raw: unknown) {
+      const cents = brlToCents(String(raw ?? '').trim())
+      if (cents != null) {
+        pricePairs.push({ product, unitCents: cents })
+      }
+    }
+
+    if (p20 || p10 || p15 || pCopo || pVasilhame) {
+      pushPrice('GALAO_20L', p20)
+      pushPrice('GALAO_10L', p10)
+      pushPrice('PET_1500ML', p15)
+      pushPrice('CAIXA_COPO', pCopo)
+      pushPrice('VASILHAME', pVasilhame)
+    } else if (valorUn) {
+      pushPrice('GALAO_20L', valorUn)
+    }
+
+    await prisma.storePrice.deleteMany({ where: { storeId: store.id } })
+
+    if (pricePairs.length > 0) {
+      await prisma.storePrice.createMany({
+        data: pricePairs.map((pair) => ({ storeId: store.id, ...pair })),
+      })
+    }
 
     console.log(`Loja sincronizada: ${loja} (${externalCode})`)
   }
