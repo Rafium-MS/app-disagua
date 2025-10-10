@@ -41,6 +41,7 @@ type VoucherWithFile = {
 }
 
 const exportsDirectory = path.resolve(process.cwd(), 'data', 'exports')
+const uploadsDirectory = path.resolve(process.cwd(), 'data', 'uploads')
 const supportedPdfExtensions = new Set(['.pdf'])
 const supportedImageExtensions = new Set(['.jpg', '.jpeg', '.png'])
 
@@ -339,19 +340,10 @@ const generateZipExport = async (
 ): Promise<VoucherSummaryEntry[]> => {
   const archive = archiver('zip', { zlib: { level: 9 } })
   const output = fs.createWriteStream(outputPath)
-
-  const manifest = report.vouchers.map((voucher) => {
-    const attachment = attachments.find((item) => item.voucher.id === voucher.id)
-
-    return {
-      id: voucher.id,
-      code: voucher.code,
-      issuedAt: voucher.issuedAt.toISOString(),
-      redeemedAt: voucher.redeemedAt ? voucher.redeemedAt.toISOString() : null,
-      filePath: voucher.filePath,
-      status: attachment?.status ?? 'missing'
-    }
-  })
+  const attachmentsByVoucherId = new Map(
+    attachments.map((attachment) => [attachment.voucher.id, attachment])
+  )
+  const summaryEntries: VoucherSummaryEntry[] = []
 
   const finalizePromise = new Promise<void>((resolve, reject) => {
     output.on('close', () => resolve())
@@ -360,12 +352,39 @@ const generateZipExport = async (
 
   archive.pipe(output)
 
-  for (const attachment of attachments) {
-    if (attachment.status === 'available' && attachment.absolutePath) {
+  for (const voucher of report.vouchers) {
+    const attachment = attachmentsByVoucherId.get(voucher.id)
+
+    if (!attachment || attachment.status !== 'available' || !attachment.absolutePath) {
+      summaryEntries.push({ voucher, status: 'missing' })
+      continue
+    }
+
+    try {
       const fileName = path.basename(attachment.absolutePath)
-      archive.file(attachment.absolutePath, { name: fileName })
+      const fileBuffer = await fsPromises.readFile(attachment.absolutePath)
+      archive.append(fileBuffer, { name: fileName })
+      summaryEntries.push({ voucher, status: 'included' })
+    } catch (error) {
+      console.error('Falha ao adicionar comprovante ao pacote ZIP', {
+        voucherId: voucher.id,
+        filePath: attachment.absolutePath,
+        error
+      })
+      summaryEntries.push({ voucher, status: 'missing' })
     }
   }
+
+  const manifest = summaryEntries.map((entry) => ({
+    id: entry.voucher.id,
+    code: entry.voucher.code,
+    issuedAt: entry.voucher.issuedAt.toISOString(),
+    redeemedAt: entry.voucher.redeemedAt
+      ? entry.voucher.redeemedAt.toISOString()
+      : null,
+    filePath: entry.voucher.filePath,
+    status: entry.status
+  }))
 
   archive.append(
     JSON.stringify(
@@ -387,11 +406,7 @@ const generateZipExport = async (
   await archive.finalize()
   await finalizePromise
 
-  return attachments.map((attachment) =>
-    attachment.status === 'available' && attachment.absolutePath
-      ? { voucher: attachment.voucher, status: 'included' as const }
-      : { voucher: attachment.voucher, status: 'missing' as const }
-  )
+  return summaryEntries
 }
 
 const pendingPartnersQuerySchema = z
@@ -654,11 +669,33 @@ const createReportsRouter = ({ prisma: prismaClient }: { prisma: PrismaClient })
           }
 
           const absolutePath = resolveFilePath(voucher.filePath)
+          const isInsideUploads = absolutePath.startsWith(`${uploadsDirectory}${path.sep}`)
+
+          if (!isInsideUploads) {
+            console.warn('Caminho de comprovante fora do diretório permitido', {
+              voucherId: voucher.id,
+              filePath: voucher.filePath,
+              resolvedPath: absolutePath
+            })
+            return { voucher, status: 'missing' as const }
+          }
 
           try {
+            const fileStats = await fsPromises.stat(absolutePath)
+
+            if (!fileStats.isFile()) {
+              return { voucher, status: 'missing' as const }
+            }
+
             await fsPromises.access(absolutePath, fs.constants.R_OK)
             return { voucher, status: 'available' as const, absolutePath }
-          } catch {
+          } catch (error) {
+            console.error('Falha ao localizar comprovante para exportação', {
+              voucherId: voucher.id,
+              filePath: voucher.filePath,
+              resolvedPath: absolutePath,
+              error
+            })
             return { voucher, status: 'missing' as const }
           }
         })
