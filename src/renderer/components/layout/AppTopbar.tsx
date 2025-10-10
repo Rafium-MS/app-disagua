@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react'
-import { Search, User } from 'lucide-react'
+import { Search } from 'lucide-react'
 import { DateRangePicker } from '@/components/DateRangePicker'
 
 type AppTopbarProps = {
@@ -38,13 +38,6 @@ export function AppTopbar({ onOpenSidebar, topRight }: AppTopbarProps) {
         <div className="ml-auto flex items-center gap-2 sm:gap-3">
           <DateRangePicker value={range} onChange={setRange} />
           {topRight}
-          <button
-            type="button"
-            className="hidden items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 text-sm font-medium text-fg transition hover:bg-muted lg:flex"
-          >
-            <User className="h-4 w-4" />
-            <span>Vanessa Lima</span>
-          </button>
         </div>
       </div>
     </header>

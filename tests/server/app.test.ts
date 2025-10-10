@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { createApp } from '../../src/server/app'
 import { prisma } from '../../src/server/prisma'
+import { signJwt } from '../../src/server/security/jwt'
+import { authConfig } from '../../src/server/config/auth'
 
 describe('createApp integration', () => {
   afterEach(() => {
@@ -39,7 +41,13 @@ describe('createApp integration', () => {
     })
 
     const app = createApp()
-    const response = await request(app).get('/stats')
+    const token = signJwt({
+      secret: authConfig.jwtSecret,
+      expiresInSeconds: authConfig.accessTokenExpiresInSeconds,
+      subject: 'user-1',
+      payload: { email: 'user@example.com', name: 'User', roles: ['ADMIN'] },
+    }).token
+    const response = await request(app).get('/stats').set('Authorization', `Bearer ${token}`)
 
     expect(response.status).toBe(200)
     expect(response.body).toEqual({

@@ -11,17 +11,28 @@ import { storesRouter } from './routes/stores'
 import { buildCorsOptions } from './config/cors'
 import { analyticsRouter } from './routes/analytics'
 import { brandsRouter } from './routes/brands'
+import { authRouter } from './routes/auth'
+import { parseCookiesMiddleware } from './middleware/parse-cookies'
+import { attachUserMiddleware } from './middleware/auth/attach-user'
+import { requireAuth } from './middleware/auth/require-auth'
+import { usersRouter } from './routes/users'
 
 export function createApp() {
   const app = express()
   app.use(cors(buildCorsOptions()))
   app.use(express.json())
+  app.use(parseCookiesMiddleware)
   app.use(requestContextMiddleware)
+  app.use(attachUserMiddleware)
 
   // Healthcheck
   app.get('/health', (_req, res) => {
     res.json({ ok: true })
   })
+
+  app.use('/auth', authRouter)
+
+  app.use(requireAuth)
 
   app.use('/api', analyticsRouter)
   app.use(['/api/partners', '/partners'], partnersRouter)
@@ -30,6 +41,7 @@ export function createApp() {
   app.use(['/api/audit-logs', '/audit-logs'], auditLogsRouter)
   app.use(['/api/brands', '/brands'], brandsRouter)
   app.use(['/api/stores', '/stores'], storesRouter)
+  app.use(['/api/users', '/users'], usersRouter)
 
   app.get('/stats', async (_req, res) => {
     try {

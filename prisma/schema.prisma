@@ -20,6 +20,11 @@ enum ProductType {
   VASILHAME
 }
 
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
 model Partner {
   id          Int       @id @default(autoincrement())
   name        String
@@ -102,6 +107,51 @@ model AuditLog {
   requestUrl    String?
   ipAddress     String?
   changes       String?
+}
+
+model User {
+  id            String         @id @default(cuid())
+  email         String         @unique
+  name          String
+  passwordHash  String
+  status        UserStatus     @default(ACTIVE)
+  failedLogins  Int            @default(0)
+  lastLoginAt   DateTime?
+  lastLoginIp   String?
+  roles         UserRole[]
+  refreshTokens RefreshToken[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Role {
+  id    String    @id @default(cuid())
+  name  String    @unique
+  users UserRole[]
+}
+
+model UserRole {
+  userId String
+  roleId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+  userAgent String?
+  ip        String?
+
+  @@index([userId])
+  @@unique([tokenHash])
 }
 
 model Store {
