@@ -67,10 +67,35 @@ Projeto base com:
 - `POST /reports/:id/export` → gera um arquivo consolidado (PDF ou ZIP) com os comprovantes do relatório informado, registra o evento na auditoria e retorna o caminho gerado.
 - `GET /stats` → retorna contagens de parceiros, relatórios e vouchers (resgatados e pendentes).
 - `GET /audit-logs` → consulta o histórico de auditoria com filtros opcionais (`entity`, `action`, `actor`, `from`, `to`, `page`, `pageSize`).
+- `GET /api/brands` → busca marcas por parceiro com filtros `q`, `page` e `pageSize`.
+- `POST /api/brands` → cria marca vinculada a um parceiro (valida duplicidade por nome/código).
+- `PATCH /api/brands/:id` → atualiza nome/código da marca.
+- `DELETE /api/brands/:id` → remove uma marca (cascata nas lojas).
+- `GET /api/stores` → lista lojas com filtros por parceiro, marca, cidade, UF, shopping, status e busca livre.
+- `GET /api/stores/:id` → carrega uma loja com marca, parceiro e grade de preços.
+- `POST /api/stores` → cria loja (opcionalmente cria marca rápida) calculando `normalizedName` e salvando preços em centavos.
+- `PATCH /api/stores/:id` → atualiza dados e substitui preços vigentes.
+- `DELETE /api/stores/:id` → remove loja e preços associados.
+- `POST /api/stores/import` → importa/atualiza lojas via XLSX (vide seção abaixo) com resumo de criados/atualizados/ignorados.
+- `POST /api/stores/detect-duplicates` → retorna grupos candidatos a duplicidade por CNPJ ou nome/cidade.
+- `POST /api/stores/merge` → mescla registros duplicados, movendo preços e vouchers para o alvo.
 
 As rotas que criam, atualizam ou removem registros geram automaticamente entradas na tabela de auditoria, incluindo operações em lote (`createMany`, `updateMany`, `deleteMany`). Para informar o usuário responsável pela alteração, envie o cabeçalho `X-Actor-Id` (ou `X-User-Id`) na requisição.
 
 Servidor embutido é iniciado pelo processo principal do Electron. No modo `dev`, a UI roda em `http://localhost:5173` e o servidor em `http://localhost:5174`. Em produção, configure a variável `CORS_ALLOWED_ORIGINS` (lista separada por vírgulas) para liberar apenas origens confiáveis.
+
+### Importação e deduplicação de lojas
+
+1. **Importar XLSX**
+   - Acesse `/stores/import` na UI ou envie `POST /api/stores/import` com `multipart/form-data` contendo `file` (planilha) e `mapping` (JSON com as colunas, ex.: `{ "colPartner": "Parceiro", "colStoreName": "Nome", "colCity": "Cidade", "colState": "UF" }`).
+   - Campos opcionais incluem marca, shopping, endereço e preços (`colValue20L`, `colValue10L`, `colValue1500`, `colValueCopo`, `colValueVasilhame`).
+   - Use `allowCreateBrand=true` para criar marcas automaticamente quando inexistentes para o parceiro.
+   - Resposta retorna `{ created, updated, skipped, conflicts[] }` com detalhes de linhas ignoradas ou conflitos de unicidade.
+
+2. **Deduplicação**
+   - A UI `/stores/duplicates` consome `POST /api/stores/detect-duplicates` para listar candidatos por CNPJ ou combinação nome/cidade/mall.
+   - Acione o merge pelo botão “Mesclar registros”, que chama `POST /api/stores/merge` com `targetId`, `sourceIds[]` e `fieldsStrategy` (`target`, `source` ou `mostRecent`).
+   - Durante o merge, vouchers e preços dos registros fonte são migrados para o alvo e os duplicados são excluídos ao final da transação.
 
 ## Auditoria e diretórios de dados
 

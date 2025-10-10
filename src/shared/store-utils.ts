@@ -63,6 +63,16 @@ export function parseBrazilAddress(raw: string): ParsedAddress {
   return output
 }
 
+export function normalizeName(value: string | null | undefined): string {
+  const text = value ?? ''
+  return text
+    .normalize('NFD')
+    .replace(/\p{Diacritic}+/gu, '')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+    .toLowerCase()
+}
+
 export function brlToCents(value?: string | number | null): number | null {
   if (value == null) {
     return null

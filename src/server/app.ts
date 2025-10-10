@@ -10,6 +10,7 @@ import { auditLogsRouter } from './routes/audit-logs'
 import { storesRouter } from './routes/stores'
 import { buildCorsOptions } from './config/cors'
 import { analyticsRouter } from './routes/analytics'
+import { brandsRouter } from './routes/brands'
 
 export function createApp() {
   const app = express()
@@ -27,6 +28,7 @@ export function createApp() {
   app.use(['/api/reports', '/reports'], reportsRouter)
   app.use(['/api/vouchers', '/vouchers'], vouchersRouter)
   app.use(['/api/audit-logs', '/audit-logs'], auditLogsRouter)
+  app.use(['/api/brands', '/brands'], brandsRouter)
   app.use(['/api/stores', '/stores'], storesRouter)
 
   app.get('/stats', async (_req, res) => {

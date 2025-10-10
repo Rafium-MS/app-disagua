@@ -27,6 +27,7 @@ type RouterContextValue = {
   query: URLSearchParams
   navigate: (to: string, options?: { replace?: boolean }) => void
   activeRoute: RouteDefinition | null
+  params: Record<string, string>
 }
 
 const RouterContext = createContext<RouterContextValue | undefined>(undefined)
@@ -123,9 +124,11 @@ export function RouterProvider({ children }: RouterProviderProps) {
   const match = useMemo(() => findRoute(path), [path])
   const activeRoute = match?.route ?? null
 
+  const params = match?.params ?? {}
+
   const value = useMemo<RouterContextValue>(
-    () => ({ path, query, navigate, activeRoute }),
-    [path, query, navigate, activeRoute],
+    () => ({ path, query, navigate, activeRoute, params }),
+    [path, query, navigate, activeRoute, params],
   )
 
   let content: ReactNode = children
@@ -170,6 +173,6 @@ export function useNavigate() {
 }
 
 export function useRouteInfo() {
-  const { activeRoute, path, query } = useRouterContext()
-  return { activeRoute, path, query }
+  const { activeRoute, path, query, params } = useRouterContext()
+  return { activeRoute, path, query, params }
 }
