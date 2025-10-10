@@ -7,6 +7,7 @@ import { partnersRouter } from './routes/partners'
 import { reportsRouter } from './routes/reports'
 import { vouchersRouter } from './routes/vouchers'
 import { auditLogsRouter } from './routes/audit-logs'
+import { storesRouter } from './routes/stores'
 import { buildCorsOptions } from './config/cors'
 
 export function createApp() {
@@ -24,6 +25,7 @@ export function createApp() {
   app.use(['/api/reports', '/reports'], reportsRouter)
   app.use(['/api/vouchers', '/vouchers'], vouchersRouter)
   app.use(['/api/audit-logs', '/audit-logs'], auditLogsRouter)
+  app.use(['/api/stores', '/stores'], storesRouter)
 
   app.get('/stats', async (_req, res) => {
     try {

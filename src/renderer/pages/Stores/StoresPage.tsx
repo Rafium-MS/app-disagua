@@ -11,7 +11,8 @@ import { partnersSeed } from '@/hooks/usePartners'
 import { storesSeed, type Store, type StoreStatus } from '@/hooks/useStores'
 import { StoreForm, type StoreFormSubmitValues } from './StoreForm'
 import { Dialog } from '@/components/ui/dialog'
-import { centsToBRL } from '@shared/store-utils'
+import { brlToCents, centsToBRL } from '@shared/store-utils'
+import type { StoreProductType } from '@shared/store-utils'
 
 const normalizeOptional = (value?: string | null) => {
   if (value == null) {
@@ -25,6 +26,17 @@ const normalizeOptional = (value?: string | null) => {
 const statusTone: Record<StoreStatus, 'emerald' | 'slate'> = {
   ACTIVE: 'emerald',
   INACTIVE: 'slate',
+}
+
+const primaryProduct: StoreProductType = 'GALAO_20L'
+
+const formatPrimaryPrice = (prices: Store['prices']) => {
+  const primary = prices.find((price) => price.product === primaryProduct) ?? prices[0]
+  if (!primary) {
+    return '—'
+  }
+  const formatted = centsToBRL(primary.unitValueCents)
+  return formatted || '—'
 }
 
 export function StoresPage({ query }: RouteComponentProps) {
@@ -104,9 +116,9 @@ export function StoresPage({ query }: RouteComponentProps) {
       ),
     },
     {
-      key: 'unitValueCents',
-      header: 'Valor unitário',
-      render: (store) => <span className="text-sm text-slate-200">{centsToBRL(store.unitValueCents)}</span>,
+      key: 'prices',
+      header: 'Preço (20L)',
+      render: (store) => <span className="text-sm text-slate-200">{formatPrimaryPrice(store.prices)}</span>,
     },
     {
       key: 'vouchersCount',
@@ -175,6 +187,19 @@ export function StoresPage({ query }: RouteComponentProps) {
       ? partnersSeed.find((partner) => partner.id === values.partnerId)?.name ?? '—'
       : '—'
 
+    const normalizedPrices = values.prices
+      .map((price) => {
+        const cents = brlToCents(price.unitValueBRL)
+        if (cents == null) {
+          return null
+        }
+        return {
+          product: price.product,
+          unitValueCents: cents,
+        }
+      })
+      .filter((price): price is { product: StoreProductType; unitValueCents: number } => price !== null)
+
     const normalized = {
       partnerId: values.partnerId,
       partnerName,
@@ -188,7 +213,7 @@ export function StoresPage({ query }: RouteComponentProps) {
       city: values.city.trim(),
       state: values.state,
       postalCode: normalizeOptional(values.postalCode),
-      unitValueCents: values.unitValueCents ?? null,
+      prices: normalizedPrices,
       status: values.status,
     }
 
@@ -224,7 +249,7 @@ export function StoresPage({ query }: RouteComponentProps) {
   }
 
   const handleExport = () => {
-    const header = 'Loja,Código,Parceiro,Município,UF,Valor Unitário,Status\n'
+    const header = 'Loja,Código,Parceiro,Município,UF,Preço (20L),Status\n'
     const csv =
       header +
       filteredStores
@@ -235,7 +260,7 @@ export function StoresPage({ query }: RouteComponentProps) {
             store.partnerName,
             store.city,
             store.state,
-            centsToBRL(store.unitValueCents),
+            formatPrimaryPrice(store.prices),
             store.status,
           ].join(','),
         )
@@ -373,7 +398,10 @@ export function StoresPage({ query }: RouteComponentProps) {
                   state: editingStore.state,
                   postalCode: editingStore.postalCode ?? undefined,
                   status: editingStore.status,
-                  unitValueCents: editingStore.unitValueCents ?? undefined,
+                  prices: editingStore.prices.map((price) => ({
+                    product: price.product,
+                    unitValueCents: price.unitValueCents,
+                  })),
                 }
               : undefined
           }
