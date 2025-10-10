@@ -18,8 +18,9 @@
       "@/hooks/*": ["src/renderer/hooks/*"],
       "@/routes/*": ["src/renderer/routes/*"],
       "@/types/*": ["src/renderer/types/*"],
-      "@/pages/*": ["src/renderer/pages/*"]
+      "@/pages/*": ["src/renderer/pages/*"],
+      "@shared/*": ["src/shared/*"]
     }
   },
-  "include": ["electron", "src", "vite.config.ts", "vitest.config.ts"]
+  "include": ["electron", "scripts", "src", "vite.config.ts", "vitest.config.ts"]
 }

@@ -7,9 +7,25 @@ import { EmptyState } from '@/components/EmptyState'
 import { FilterBar, FilterSelect } from '@/components/FilterBar'
 import { StatusBadge } from '@/components/StatusBadge'
 import type { RouteComponentProps } from '@/types/router'
-import { storesSeed, type Store } from '@/hooks/useStores'
-import { StoreForm, type StoreFormValues } from './StoreForm'
+import { partnersSeed } from '@/hooks/usePartners'
+import { storesSeed, type Store, type StoreStatus } from '@/hooks/useStores'
+import { StoreForm, type StoreFormSubmitValues } from './StoreForm'
 import { Dialog } from '@/components/ui/dialog'
+import { centsToBRL } from '@shared/store-utils'
+
+const normalizeOptional = (value?: string | null) => {
+  if (value == null) {
+    return null
+  }
+
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : null
+}
+
+const statusTone: Record<StoreStatus, 'emerald' | 'slate'> = {
+  ACTIVE: 'emerald',
+  INACTIVE: 'slate',
+}
 
 export function StoresPage({ query }: RouteComponentProps) {
   const [stores, setStores] = useState<Store[]>(storesSeed)
@@ -17,7 +33,7 @@ export function StoresPage({ query }: RouteComponentProps) {
     partnerId: query.get('partner') ?? 'all',
     city: '',
     state: 'all',
-    status: 'all' as 'all' | 'ativa' | 'encerrada',
+    status: 'all' as 'all' | StoreStatus,
     search: '',
   })
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -27,6 +43,7 @@ export function StoresPage({ query }: RouteComponentProps) {
 
   const filteredStores = useMemo(() => {
     const normalizedSearch = filters.search.trim().toLowerCase()
+
     return stores.filter((store) => {
       if (filters.partnerId !== 'all' && store.partnerId !== filters.partnerId) {
         return false
@@ -40,59 +57,69 @@ export function StoresPage({ query }: RouteComponentProps) {
       if (filters.status !== 'all' && store.status !== filters.status) {
         return false
       }
-      if (
-        normalizedSearch.length > 0 &&
-        !store.name.toLowerCase().includes(normalizedSearch) &&
-        !store.cnpj.replace(/\D/g, '').includes(normalizedSearch.replace(/\D/g, ''))
-      ) {
-        return false
+      if (normalizedSearch.length > 0) {
+        const matches = [
+          store.name,
+          store.externalCode ?? '',
+          store.addressRaw,
+          store.partnerName,
+        ]
+          .filter(Boolean)
+          .some((value) => value.toLowerCase().includes(normalizedSearch))
+
+        if (!matches) {
+          return false
+        }
       }
+
       return true
     })
   }, [stores, filters])
 
-  const situationTone: Record<Store['situation'], 'emerald' | 'amber' | 'slate'> = {
-    'em-dia': 'emerald',
-    pendente: 'amber',
-    'sem-relatorio': 'slate',
-  }
-
   const columns: ColumnConfig<Store>[] = [
-    { key: 'name', header: 'Loja', sortable: true },
-    { key: 'cnpj', header: 'CNPJ' },
     {
-      key: 'city',
-      header: 'Cidade/UF',
+      key: 'name',
+      header: 'Loja',
+      sortable: true,
       render: (store) => (
-        <div className="flex flex-col text-sm">
-          <span className="font-semibold text-slate-200">{store.city}</span>
-          <span className="text-xs text-slate-400">{store.state}</span>
+        <div className="flex flex-col">
+          <span className="font-semibold text-slate-200">{store.name}</span>
+          <span className="text-xs text-slate-400">{store.externalCode ?? '—'}</span>
         </div>
       ),
     },
     {
       key: 'partnerName',
       header: 'Parceiro',
-      render: (store) => <span className="text-slate-200">{store.partnerName}</span>,
+      render: (store) => <span className="text-sm text-slate-200">{store.partnerName || '—'}</span>,
     },
     {
-      key: 'lastVoucher',
-      header: 'Último Comprovante',
-      render: (store) => (store.lastVoucher ? new Date(store.lastVoucher).toLocaleDateString('pt-BR') : '—'),
+      key: 'city',
+      header: 'Município / UF',
+      render: (store) => (
+        <div className="flex flex-col text-sm">
+          <span className="text-slate-200">{store.city}</span>
+          <span className="text-xs text-slate-400">{store.state}</span>
+        </div>
+      ),
     },
     {
-      key: 'situation',
-      header: 'Situação',
+      key: 'unitValueCents',
+      header: 'Valor unitário',
+      render: (store) => <span className="text-sm text-slate-200">{centsToBRL(store.unitValueCents)}</span>,
+    },
+    {
+      key: 'vouchersCount',
+      header: 'Vouchers',
+      render: (store) => <span className="text-sm text-slate-200">{store.vouchersCount}</span>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
       render: (store) => (
         <StatusBadge
-          status={
-            store.situation === 'em-dia'
-              ? 'Em dia'
-              : store.situation === 'pendente'
-              ? 'Pendente'
-              : 'Sem relatório ativo'
-          }
-          tone={situationTone[store.situation]}
+          status={store.status === 'ACTIVE' ? 'Ativa' : 'Inativa'}
+          tone={statusTone[store.status]}
         />
       ),
     },
@@ -123,7 +150,7 @@ export function StoresPage({ query }: RouteComponentProps) {
             onClick={() => toggleStatus(store.id)}
             className="rounded-lg border border-slate-700 px-2 py-1 text-xs text-slate-200 hover:border-amber-300"
           >
-            {store.status === 'ativa' ? 'Desativar' : 'Ativar'}
+            {store.status === 'ACTIVE' ? 'Desativar' : 'Ativar'}
           </button>
         </div>
       ),
@@ -133,33 +160,61 @@ export function StoresPage({ query }: RouteComponentProps) {
   const toggleStatus = (storeId: string) => {
     setStores((previous) =>
       previous.map((store) =>
-        store.id === storeId ? { ...store, status: store.status === 'ativa' ? 'encerrada' : 'ativa' } : store,
+        store.id === storeId
+          ? {
+              ...store,
+              status: store.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
+            }
+          : store,
       ),
     )
   }
 
-  const handleSaveStore = (values: StoreFormValues) => {
+  const handleSaveStore = (values: StoreFormSubmitValues) => {
+    const partnerName = values.partnerId
+      ? partnersSeed.find((partner) => partner.id === values.partnerId)?.name ?? '—'
+      : '—'
+
+    const normalized = {
+      partnerId: values.partnerId,
+      partnerName,
+      name: values.name.trim(),
+      externalCode: normalizeOptional(values.externalCode),
+      addressRaw: values.addressRaw.trim(),
+      street: normalizeOptional(values.street),
+      number: normalizeOptional(values.number),
+      complement: normalizeOptional(values.complement),
+      district: normalizeOptional(values.district),
+      city: values.city.trim(),
+      state: values.state,
+      postalCode: normalizeOptional(values.postalCode),
+      unitValueCents: values.unitValueCents ?? null,
+      status: values.status,
+    }
+
     if (editingStore) {
       setStores((previous) =>
-        previous.map((store) => (store.id === editingStore.id ? { ...store, ...values } : store)),
+        previous.map((store) =>
+          store.id === editingStore.id
+            ? {
+                ...store,
+                ...normalized,
+              }
+            : store,
+        ),
       )
     } else {
       setStores((previous) => [
         ...previous,
         {
-          id: `s-${String(previous.length + 1).padStart(2, '0')}`,
-          name: values.name,
-          cnpj: values.cnpj,
-          city: values.city,
-          state: values.state,
-          partnerId: values.partner,
-          partnerName: values.partner,
-          lastVoucher: undefined,
-          situation: 'em-dia',
-          status: 'ativa',
+          id: crypto.randomUUID(),
+          ...normalized,
+          lastVoucher: null,
+          vouchersCount: 0,
         },
       ])
     }
+
     setDrawerOpen(false)
     setEditingStore(null)
   }
@@ -169,18 +224,18 @@ export function StoresPage({ query }: RouteComponentProps) {
   }
 
   const handleExport = () => {
-    const header = 'Loja,CNPJ,Cidade,UF,Parceiro,Situacao,Status\n'
+    const header = 'Loja,Código,Parceiro,Município,UF,Valor Unitário,Status\n'
     const csv =
       header +
       filteredStores
         .map((store) =>
           [
             store.name,
-            store.cnpj,
+            store.externalCode ?? '',
+            store.partnerName,
             store.city,
             store.state,
-            store.partnerName,
-            store.situation,
+            centsToBRL(store.unitValueCents),
             store.status,
           ].join(','),
         )
@@ -198,82 +253,72 @@ export function StoresPage({ query }: RouteComponentProps) {
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-3">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-100">Lojas</h1>
-            <p className="text-sm text-slate-400">Administre filiais e mantenha o acompanhamento de comprovantes.</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setEditingStore(null)
-                setDrawerOpen(true)
-              }}
-              className="flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow hover:bg-emerald-400"
-            >
-              <Plus className="h-4 w-4" /> Nova Loja
-            </button>
-          </div>
+      <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-100">Lojas</h1>
+          <p className="text-sm text-slate-400">
+            Cadastre pontos de coleta vinculados às marcas para acompanhar comprovantes e relatórios.
+          </p>
         </div>
-        <FilterBar
-          searchPlaceholder="Buscar por nome ou CNPJ"
-          searchValue={filters.search}
-          onSearchChange={(value) => setFilters((previous) => ({ ...previous, search: value }))}
-          actions={
-            selectedIds.length > 0 && (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleBulkLink}
-                  className="flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200"
-                >
-                  <Link2 className="h-3 w-3" /> Vincular a relatório
-                </button>
-                <button
-                  type="button"
-                  onClick={handleExport}
-                  className="flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-200"
-                >
-                  <Download className="h-3 w-3" /> Exportar CSV
-                </button>
-              </div>
-            )
-          }
-        >
-          <FilterSelect
-            label="Parceiro"
-            value={filters.partnerId}
-            onChange={(value) => setFilters((previous) => ({ ...previous, partnerId: value }))}
-            options={[{ label: 'Todos', value: 'all' }].concat(
-              ['p-001', 'p-002', 'p-003'].map((id) => ({
-                label: id === 'p-001' ? 'Aquarius Group' : id === 'p-002' ? 'Fonte Viva' : 'Rio Claro Distribuidora',
-                value: id,
-              })),
-            )}
-          />
-          <FilterSelect
-            label="UF"
-            value={filters.state}
-            onChange={(value) => setFilters((previous) => ({ ...previous, state: value }))}
-            options={['all', 'SP', 'MG', 'RJ', 'PR'].map((state) => ({
-              label: state === 'all' ? 'Todas' : state,
-              value: state,
-            }))}
-          />
-          <FilterSelect
-            label="Status"
-            value={filters.status}
-            onChange={(value) => setFilters((previous) => ({ ...previous, status: value as 'all' | 'ativa' | 'encerrada' }))}
-            options={[
-              { label: 'Todos', value: 'all' },
-              { label: 'Ativas', value: 'ativa' },
-              { label: 'Encerradas', value: 'encerrada' },
-            ]}
-          />
-        </FilterBar>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-slate-950 shadow hover:bg-emerald-400"
+          >
+            <Plus className="h-4 w-4" /> Nova loja
+          </button>
+          <button
+            type="button"
+            onClick={handleBulkLink}
+            disabled={selectedIds.length === 0}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Link2 className="h-4 w-4" /> Vincular a relatório
+          </button>
+          <button
+            type="button"
+            onClick={handleExport}
+            className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500"
+          >
+            <Download className="h-4 w-4" /> Exportar CSV
+          </button>
+        </div>
       </header>
+
+      <FilterBar
+        searchPlaceholder="Buscar por nome, código ou endereço"
+        searchValue={filters.search}
+        onSearchChange={(value) => setFilters((previous) => ({ ...previous, search: value }))}
+      >
+        <FilterSelect
+          label="Parceiro"
+          value={filters.partnerId}
+          onChange={(value) => setFilters((previous) => ({ ...previous, partnerId: value }))}
+          options={[{ label: 'Todos', value: 'all' }].concat(
+            partnersSeed.map((partner) => ({ label: partner.name, value: partner.id })),
+          )}
+        />
+        <FilterSelect
+          label="UF"
+          value={filters.state}
+          onChange={(value) => setFilters((previous) => ({ ...previous, state: value }))}
+          options={['all', 'SP', 'MG', 'RJ', 'PR'].map((state) => ({
+            label: state === 'all' ? 'Todas' : state,
+            value: state,
+          }))}
+        />
+        <FilterSelect
+          label="Status"
+          value={filters.status}
+          onChange={(value) => setFilters((previous) => ({ ...previous, status: value as 'all' | StoreStatus }))}
+          options={[
+            { label: 'Todos', value: 'all' },
+            { label: 'Ativas', value: 'ACTIVE' },
+            { label: 'Inativas', value: 'INACTIVE' },
+          ]}
+        />
+      </FilterBar>
 
       {filteredStores.length === 0 ? (
         <EmptyState
@@ -296,7 +341,7 @@ export function StoresPage({ query }: RouteComponentProps) {
           selectable
           getRowId={(store) => store.id}
           onSelectionChange={setSelectedIds}
-          footer={<span>{filteredStores.length} lojas encontradas</span>}
+          footer={<span>{filteredStores.length} loja(s) encontradas</span>}
         />
       )}
 
@@ -312,18 +357,30 @@ export function StoresPage({ query }: RouteComponentProps) {
         footer={null}
       >
         <StoreForm
+          partners={partnersSeed.map((partner) => ({ id: partner.id, name: partner.name }))}
           defaultValues={
             editingStore
               ? {
+                  partnerId: editingStore.partnerId ?? undefined,
                   name: editingStore.name,
-                  cnpj: editingStore.cnpj,
+                  externalCode: editingStore.externalCode ?? undefined,
+                  addressRaw: editingStore.addressRaw,
+                  street: editingStore.street ?? undefined,
+                  number: editingStore.number ?? undefined,
+                  complement: editingStore.complement ?? undefined,
+                  district: editingStore.district ?? undefined,
                   city: editingStore.city,
                   state: editingStore.state,
-                  partner: editingStore.partnerId,
-                  contact: '',
+                  postalCode: editingStore.postalCode ?? undefined,
+                  status: editingStore.status,
+                  unitValueCents: editingStore.unitValueCents ?? undefined,
                 }
               : undefined
           }
+          onCancel={() => {
+            setDrawerOpen(false)
+            setEditingStore(null)
+          }}
           onSubmit={(values) => handleSaveStore(values)}
         />
       </DrawerForm>
