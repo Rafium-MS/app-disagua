@@ -131,7 +131,7 @@ export function Dialog({
   const containerClass =
     size === 'fullscreen'
       ? 'fixed inset-0 z-50 flex items-stretch justify-center bg-bg/60 px-0 backdrop-blur'
-      : 'fixed inset-0 z-50 flex items-center justify-center bg-bg/60 px-4 backdrop-blur'
+      : 'fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-bg/60 px-4 py-8 sm:items-center backdrop-blur'
 
   const sizeClass = {
     sm: 'max-w-sm',
@@ -157,7 +157,7 @@ export function Dialog({
     >
       <div
         ref={dialogRef}
-        className={`relative w-full ${sizeClass} rounded-xl border border-border bg-card shadow-xl focus:outline-none`}
+        className={`relative flex w-full flex-col ${sizeClass} max-h-[calc(100vh-2rem)] overflow-hidden rounded-xl border border-border bg-card shadow-xl focus:outline-none sm:max-h-[calc(100vh-4rem)]`}
         tabIndex={-1}
       >
         <button
@@ -168,21 +168,23 @@ export function Dialog({
         >
           ×
         </button>
-        <div className="space-y-4 p-6">
-          {title && (
-            <h2 id={`${titleId}-title`} className="text-lg font-semibold text-fg">
-              {title}
-            </h2>
-          )}
-          {description && (
-            <p id={`${descriptionId}-description`} className="text-sm text-fg/70">
-              {description}
-            </p>
-          )}
-          <div className="space-y-3">{children}</div>
+        <div className="flex-1 overflow-y-auto">
+          <div className="space-y-4 p-6">
+            {title && (
+              <h2 id={`${titleId}-title`} className="text-lg font-semibold text-fg">
+                {title}
+              </h2>
+            )}
+            {description && (
+              <p id={`${descriptionId}-description`} className="text-sm text-fg/70">
+                {description}
+              </p>
+            )}
+            <div className="space-y-3 pb-6 sm:pb-8">{children}</div>
+          </div>
         </div>
         {footer && (
-          <div className="flex justify-end gap-3 border-t border-border bg-muted/40 px-6 py-4">
+          <div className="flex shrink-0 justify-end gap-3 border-t border-border bg-muted/40 px-6 py-4">
             {footer}
           </div>
         )}
