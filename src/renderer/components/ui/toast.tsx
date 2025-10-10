@@ -50,25 +50,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
           {toasts.map((toast) => (
             <div
               key={toast.id}
-              className={`pointer-events-auto rounded-md border border-border bg-background px-4 py-3 text-sm shadow-lg transition ${
+              className={`pointer-events-auto rounded-xl border border-border bg-card px-4 py-3 text-sm shadow-lg transition ${
                 toast.variant === 'success'
-                  ? 'border-emerald-300 bg-emerald-50 text-emerald-900'
+                  ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-400'
                   : toast.variant === 'error'
-                    ? 'border-red-300 bg-red-50 text-red-900'
-                    : 'bg-background text-foreground'
+                    ? 'border-red-400/60 bg-red-500/10 text-red-400'
+                    : 'text-fg'
               }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="font-semibold">{toast.title}</p>
                   {toast.description && (
-                    <p className="mt-1 text-xs text-muted-foreground">{toast.description}</p>
+                    <p className="mt-1 text-xs text-fg/70">{toast.description}</p>
                   )}
                 </div>
                 <button
                   type="button"
                   onClick={() => removeToast(toast.id)}
-                  className="rounded-full p-1 text-xs text-muted-foreground transition hover:bg-muted"
+                  className="rounded-full p-1 text-xs text-fg/60 transition hover:bg-muted"
                   aria-label="Fechar notificação"
                 >
                   ×

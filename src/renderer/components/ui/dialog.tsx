@@ -35,7 +35,7 @@ export function Dialog({ open, onClose, title, description, children, footer }: 
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 px-4 backdrop-blur"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-bg/60 px-4 backdrop-blur"
       role="dialog"
       aria-modal
       aria-label={title}
@@ -45,18 +45,18 @@ export function Dialog({ open, onClose, title, description, children, footer }: 
         }
       }}
     >
-      <div className="relative w-full max-w-lg rounded-lg border border-border bg-background shadow-xl">
+      <div className="relative w-full max-w-lg rounded-xl border border-border bg-card shadow-xl">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-3 top-3 rounded-full p-1 text-muted-foreground transition hover:bg-muted"
+          className="absolute right-3 top-3 rounded-full p-1 text-fg/60 transition hover:bg-muted"
           aria-label="Fechar"
         >
           ×
         </button>
         <div className="space-y-4 p-6">
-          {title && <h2 className="text-lg font-semibold text-foreground">{title}</h2>}
-          {description && <p className="text-sm text-muted-foreground">{description}</p>}
+          {title && <h2 className="text-lg font-semibold text-fg">{title}</h2>}
+          {description && <p className="text-sm text-fg/70">{description}</p>}
           <div className="space-y-3">{children}</div>
         </div>
         {footer && (

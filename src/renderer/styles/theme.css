@@ -1,0 +1,47 @@
+:root {
+  --bg: 255 255 255;          /* branco */
+  --fg: 17 24 39;             /* slate-900 */
+  --muted: 243 244 246;       /* gray-100 */
+  --card: 255 255 255;
+  --border: 229 231 235;      /* gray-200 */
+  --primary: 37 99 235;       /* blue-600 */
+  --ok: 16 185 129;           /* emerald-500 */
+  --warn: 234 179 8;          /* yellow-500 */
+  --danger: 239 68 68;        /* red-500 */
+}
+
+[data-theme="dark"] {
+  --bg: 17 24 39;             /* slate-900 */
+  --fg: 226 232 240;          /* slate-200 */
+  --muted: 30 41 59;          /* slate-800 */
+  --card: 15 23 42;
+  --border: 51 65 85;         /* slate-700 */
+  --primary: 59 130 246;      /* blue-500 */
+}
+
+/* utilidades base para Tailwind via rgb(var(--x)) */
+:root,
+[data-theme="dark"] {
+  color-scheme: light dark;
+}
+
+html,
+body,
+[data-theme] {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.badge-ok {
+  background: rgb(var(--ok) / 0.12);
+  color: rgb(var(--ok));
+}
+
+.badge-warn {
+  background: rgb(var(--warn) / 0.12);
+  color: rgb(var(--warn));
+}
+
+.badge-danger {
+  background: rgb(var(--danger) / 0.12);
+  color: rgb(var(--danger));
+}

@@ -19,6 +19,7 @@
       "@/routes/*": ["src/renderer/routes/*"],
       "@/types/*": ["src/renderer/types/*"],
       "@/pages/*": ["src/renderer/pages/*"],
+      "@/theme/*": ["src/renderer/theme/*"],
       "@shared/*": ["src/shared/*"]
     }
   },

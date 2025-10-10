@@ -271,16 +271,16 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card p-4">
         <div className="flex items-center gap-2">
-          <label htmlFor="filter-state" className="text-xs uppercase tracking-wide text-slate-400">
+          <label htmlFor="filter-state" className="text-xs uppercase tracking-wide text-fg/60">
             UF
           </label>
           <select
             id="filter-state"
             value={stateFilter}
             onChange={(event) => setStateFilter(event.target.value)}
-            className="rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
+            className="rounded-lg border border-border bg-bg px-2 py-1 text-xs text-fg focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
             <option value="all">Todas</option>
             {data.filters.states.map((state) => (
@@ -292,14 +292,14 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
         </div>
 
         <div className="flex items-center gap-2">
-          <label htmlFor="filter-distributor" className="text-xs uppercase tracking-wide text-slate-400">
+          <label htmlFor="filter-distributor" className="text-xs uppercase tracking-wide text-fg/60">
             Distribuidora
           </label>
           <select
             id="filter-distributor"
             value={distributorFilter}
             onChange={(event) => setDistributorFilter(event.target.value)}
-            className="min-w-[180px] rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-100"
+            className="min-w-[180px] rounded-lg border border-border bg-bg px-2 py-1 text-xs text-fg focus:outline-none focus:ring-2 focus:ring-primary/40"
           >
             <option value="all">Todas</option>
             {data.filters.distributors.map((distributor) => (
@@ -310,12 +310,12 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
           </select>
         </div>
 
-        <label className="flex items-center gap-2 text-xs text-slate-300">
+        <label className="flex items-center gap-2 text-xs text-fg/70">
           <input
             type="checkbox"
             checked={onlyMissingPrice}
             onChange={(event) => setOnlyMissingPrice(event.target.checked)}
-            className="h-3 w-3 rounded border border-slate-600 bg-slate-900"
+            className="h-3 w-3 rounded border border-border bg-card"
           />
           Somente parceiros com preço ausente
         </label>
@@ -323,15 +323,15 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
         <button
           type="button"
           onClick={handleExportCsv}
-          className="ml-auto rounded-md border border-slate-700 px-3 py-1 text-xs font-semibold text-slate-200 hover:border-emerald-400"
+          className="ml-auto rounded-lg border border-border bg-card px-3 py-1 text-xs font-semibold text-fg transition hover:bg-muted"
         >
           Exportar CSV
         </button>
       </div>
 
-      <div className="overflow-auto rounded-xl border border-slate-800">
+      <div className="overflow-auto rounded-xl border border-border">
         <table className="min-w-[1200px] w-full text-sm">
-          <thead className="bg-muted/50">
+          <thead className="bg-muted/50 text-xs uppercase tracking-wide text-fg/60">
             <tr>
               <th className="p-2 text-left">CIDADE</th>
               <th className="p-2 text-left">ESTADO</th>
@@ -356,15 +356,15 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
               <th className="p-2 text-right">TOTAL (R$)</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="bg-card">
             {filteredRows.map((row) => (
-              <tr key={row.partnerId} className="odd:bg-background even:bg-muted/20">
+              <tr key={row.partnerId} className="odd:bg-card even:bg-muted/20">
                 <td className="p-2">{row.CIDADE ?? '-'}</td>
                 <td className="p-2">{row.ESTADO ?? '-'}</td>
                 <td className="p-2 font-medium">
                   <span>{row.PARCEIRO}</span>
                   {row.hasMissingPrice ? (
-                    <span className="ml-2 inline-flex items-center rounded-full bg-amber-500/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                    <span className="ml-2 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide badge-warn">
                       preço pendente
                     </span>
                   ) : null}
@@ -381,7 +381,7 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
                 <td
                   className={`p-2 text-right ${
                     row.missingPriceProducts.includes('CX COPO') && row['CX COPO_qtd'] > 0
-                      ? 'text-amber-300'
+                      ? 'text-[rgb(var(--warn))]'
                       : ''
                   }`}
                 >
@@ -391,7 +391,7 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
                 <td
                   className={`p-2 text-right ${
                     row.missingPriceProducts.includes('10 LITROS') && row['10 LITROS_qtd'] > 0
-                      ? 'text-amber-300'
+                      ? 'text-[rgb(var(--warn))]'
                       : ''
                   }`}
                 >
@@ -401,7 +401,7 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
                 <td
                   className={`p-2 text-right ${
                     row.missingPriceProducts.includes('20 LITROS') && row['20 LITROS_qtd'] > 0
-                      ? 'text-amber-300'
+                      ? 'text-[rgb(var(--warn))]'
                       : ''
                   }`}
                 >
@@ -411,7 +411,7 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
                 <td
                   className={`p-2 text-right ${
                     row.missingPriceProducts.includes('1500 ML') && row['1500 ML_qtd'] > 0
-                      ? 'text-amber-300'
+                      ? 'text-[rgb(var(--warn))]'
                       : ''
                   }`}
                 >
@@ -424,14 +424,14 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
 
             {!hasData && (
               <tr>
-                <td colSpan={21} className="p-4 text-center text-sm text-slate-400">
+                <td colSpan={21} className="p-4 text-center text-sm text-fg/60">
                   Nenhum parceiro encontrado com os filtros selecionados.
                 </td>
               </tr>
             )}
           </tbody>
           <tfoot>
-            <tr className="bg-muted/40 font-semibold text-slate-200">
+            <tr className="bg-muted/40 font-semibold text-fg">
               <td className="p-2 text-right" colSpan={11}>
                 Totais do período
               </td>
@@ -450,7 +450,7 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
         </table>
       </div>
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-fg/60">
         {hasData
           ? `${filteredRows.length} parceiro(s) exibido(s).`
           : 'Ajuste os filtros para visualizar os parceiros.'}

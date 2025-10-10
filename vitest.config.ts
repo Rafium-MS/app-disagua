@@ -16,6 +16,7 @@ export default defineConfig({
       '@/routes': resolve(__dirname, 'src/renderer/routes'),
       '@/types': resolve(__dirname, 'src/renderer/types'),
       '@/pages': resolve(__dirname, 'src/renderer/pages'),
+      '@/theme': resolve(__dirname, 'src/renderer/theme'),
       '@shared': resolve(__dirname, 'src/shared')
     }
   },

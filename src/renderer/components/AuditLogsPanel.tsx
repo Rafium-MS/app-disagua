@@ -14,7 +14,7 @@ const formatDateTime = (value: string) => {
 
   return date.toLocaleString('pt-BR', {
     dateStyle: 'short',
-    timeStyle: 'medium'
+    timeStyle: 'medium',
   })
 }
 
@@ -34,9 +34,9 @@ export function AuditLogsPanel() {
       from: fromFilter,
       to: toFilter,
       page,
-      pageSize
+      pageSize,
     }),
-    [entityFilter, actionFilter, actorFilter, fromFilter, toFilter, page]
+    [entityFilter, actionFilter, actorFilter, fromFilter, toFilter, page],
   )
 
   const logsState = useAuditLogs(filters)
@@ -59,20 +59,26 @@ export function AuditLogsPanel() {
     setPage(1)
   }, [])
 
+  const inputClasses =
+    'w-full rounded-lg border border-border bg-bg px-3 py-2 text-sm shadow-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40'
+
   return (
-    <section className="rounded-2xl border border-border/60 bg-background/80 p-6 shadow-sm backdrop-blur space-y-5">
+    <section className="space-y-5 rounded-2xl border border-border/60 bg-card/90 p-6 shadow-sm backdrop-blur">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold">Auditoria de mudanças</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-lg font-semibold text-fg">Auditoria de mudanças</h2>
+          <p className="text-sm text-fg/70">
             Consulte ações relevantes registradas automaticamente pelo sistema.
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleFilterSubmit} className="grid gap-4 rounded-lg border bg-background p-4 sm:grid-cols-2 lg:grid-cols-3">
+      <form
+        onSubmit={handleFilterSubmit}
+        className="grid gap-4 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3"
+      >
         <label className="space-y-1">
-          <span className="block text-sm font-medium text-foreground">Entidade</span>
+          <span className="block text-sm font-medium text-fg">Entidade</span>
           <input
             value={entityFilter}
             onChange={(event) => {
@@ -80,11 +86,11 @@ export function AuditLogsPanel() {
               resetPagination()
             }}
             placeholder="Partner, Report..."
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={inputClasses}
           />
         </label>
         <label className="space-y-1">
-          <span className="block text-sm font-medium text-foreground">Ação</span>
+          <span className="block text-sm font-medium text-fg">Ação</span>
           <input
             value={actionFilter}
             onChange={(event) => {
@@ -92,11 +98,11 @@ export function AuditLogsPanel() {
               resetPagination()
             }}
             placeholder="create, update..."
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={inputClasses}
           />
         </label>
         <label className="space-y-1">
-          <span className="block text-sm font-medium text-foreground">Autor</span>
+          <span className="block text-sm font-medium text-fg">Autor</span>
           <input
             value={actorFilter}
             onChange={(event) => {
@@ -104,11 +110,11 @@ export function AuditLogsPanel() {
               resetPagination()
             }}
             placeholder="Identificador do usuário"
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={inputClasses}
           />
         </label>
         <label className="space-y-1">
-          <span className="block text-sm font-medium text-foreground">De</span>
+          <span className="block text-sm font-medium text-fg">De</span>
           <input
             type="date"
             value={fromFilter}
@@ -116,11 +122,11 @@ export function AuditLogsPanel() {
               setFromFilter(event.target.value)
               resetPagination()
             }}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={inputClasses}
           />
         </label>
         <label className="space-y-1">
-          <span className="block text-sm font-medium text-foreground">Até</span>
+          <span className="block text-sm font-medium text-fg">Até</span>
           <input
             type="date"
             value={toFilter}
@@ -128,7 +134,7 @@ export function AuditLogsPanel() {
               setToFilter(event.target.value)
               resetPagination()
             }}
-            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className={inputClasses}
           />
         </label>
         <div className="flex items-center gap-2">
@@ -141,9 +147,9 @@ export function AuditLogsPanel() {
         </div>
       </form>
 
-      <div className="overflow-x-auto rounded-lg border border-border/60">
-        <table className="min-w-full divide-y divide-border text-sm">
-          <thead className="bg-muted/50 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
+      <div className="overflow-auto rounded-xl border border-border">
+        <table className="min-w-[900px] w-full text-sm">
+          <thead className="bg-muted/50 text-left text-xs font-medium uppercase tracking-wider text-fg/60">
             <tr>
               <th className="px-4 py-3">Data</th>
               <th className="px-4 py-3">Entidade</th>
@@ -153,60 +159,49 @@ export function AuditLogsPanel() {
               <th className="px-4 py-3">Detalhes</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border bg-background">
+          <tbody className="divide-y divide-border bg-card">
             {logsState.status === 'loading' && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">
+                <td colSpan={6} className="px-4 py-6 text-center text-fg/60">
                   Carregando registros...
                 </td>
               </tr>
             )}
             {logsState.status === 'error' && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-red-600">
+                <td colSpan={6} className="px-4 py-6 text-center text-red-500">
                   Não foi possível carregar os logs de auditoria.
                 </td>
               </tr>
             )}
             {logsState.status === 'success' && logsState.data.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">
+                <td colSpan={6} className="px-4 py-6 text-center text-fg/60">
                   Nenhum registro encontrado para os filtros informados.
                 </td>
               </tr>
             )}
             {logsState.status === 'success' &&
               logsState.data.map((log) => (
-                <tr key={log.id}>
-                  <td className="px-4 py-3 align-top font-medium text-foreground">
-                    {formatDateTime(log.createdAt)}
+                <tr key={log.id} className="odd:bg-card even:bg-muted/20">
+                  <td className="px-4 py-3 align-top font-medium text-fg">{formatDateTime(log.createdAt)}</td>
+                  <td className="px-4 py-3 align-top">
+                    <div className="font-medium text-fg">{log.entity}</div>
+                    {log.entityId && <div className="text-xs text-fg/60">ID: {log.entityId}</div>}
                   </td>
                   <td className="px-4 py-3 align-top">
-                    <div className="font-medium text-foreground">{log.entity}</div>
-                    {log.entityId && (
-                      <div className="text-xs text-muted-foreground">ID: {log.entityId}</div>
-                    )}
+                    <div className="font-medium text-fg">{log.action}</div>
+                    {log.requestId && <div className="text-xs text-fg/60">Req: {log.requestId}</div>}
                   </td>
-                  <td className="px-4 py-3 align-top">
-                    <div className="font-medium text-foreground">{log.action}</div>
-                    {log.requestId && (
-                      <div className="text-xs text-muted-foreground">Req: {log.requestId}</div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 align-top">
-                    {log.actor ? log.actor : <span className="text-muted-foreground">—</span>}
-                  </td>
+                  <td className="px-4 py-3 align-top text-fg/80">{log.actor ? log.actor : '—'}</td>
                   <td className="px-4 py-3 align-top">
                     <div>{log.requestMethod ?? '—'}</div>
-                    <div
-                      className="truncate text-xs text-muted-foreground"
-                      title={log.requestUrl ?? undefined}
-                    >
+                    <div className="truncate text-xs text-fg/60" title={log.requestUrl ?? undefined}>
                       {log.requestUrl ?? '—'}
                     </div>
                   </td>
                   <td className="px-4 py-3 align-top">
-                    <pre className="max-h-32 overflow-auto rounded bg-muted px-2 py-1 text-xs text-muted-foreground">
+                    <pre className="max-h-32 overflow-auto rounded-lg bg-muted px-2 py-1 text-xs text-fg/80">
                       {log.changes ? log.changes : '—'}
                     </pre>
                   </td>
@@ -218,7 +213,7 @@ export function AuditLogsPanel() {
 
       {logsState.status === 'success' && logsState.pagination.totalPages > 1 && (
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">
+          <span className="text-fg/70">
             Página {logsState.pagination.page} de {logsState.pagination.totalPages}
           </span>
           <div className="flex items-center gap-2">

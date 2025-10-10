@@ -13,6 +13,8 @@ import { routeDefinitions, type RouteDefinition } from './appRoutes'
 import type { RouteComponentProps } from '../types/router'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { LoadingView } from '@/components/layout/LoadingView'
+import { ThemeToggle } from '@/components/ThemeToggle'
+import { ThemeProvider } from '@/theme/ThemeProvider'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
 export type RouterMatch = {
@@ -147,9 +149,11 @@ export function RouterProvider({ children }: RouterProviderProps) {
   }
 
   return (
-    <RouterContext.Provider value={value}>
-      <AppLayout>{content}</AppLayout>
-    </RouterContext.Provider>
+    <ThemeProvider>
+      <RouterContext.Provider value={value}>
+        <AppLayout topRight={<ThemeToggle />}>{content}</AppLayout>
+      </RouterContext.Provider>
+    </ThemeProvider>
   )
 }
 
