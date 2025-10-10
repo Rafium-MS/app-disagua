@@ -134,9 +134,22 @@ export function PartnersPage({ navigate, query }: RouteComponentProps) {
         ...previous,
         {
           id: `p-${String(previous.length + 1).padStart(3, '0')}`,
-          name: values.name,
-          email: values.email,
+          city: values.city,
           state: values.state,
+          name: values.name,
+          distributor: values.distributor,
+          document: values.document,
+          email: values.email,
+          phone: values.phone,
+          paymentDay: values.paymentDay,
+          bank: values.bank,
+          agencyAccount: values.agencyAccount,
+          pixKey: values.pixKey,
+          volumeCupBox: values.volumeCupBox,
+          volume10L: values.volume10L,
+          volume20L: values.volume20L,
+          volume1500ml: values.volume1500ml,
+          volumeTotal: values.volumeTotal,
           status: values.status,
           stores: 0,
           activeReports: 0,
@@ -316,12 +329,33 @@ export function PartnersPage({ navigate, query }: RouteComponentProps) {
           event.preventDefault()
         }}
         footer={null}
+        size="xl"
       >
         <PartnerForm
-          defaultValues={editingPartner ?? undefined}
-          onSubmit={(values) => {
-            handleSavePartner(values)
-          }}
+          defaultValues={
+            editingPartner
+              ? {
+                  city: editingPartner.city,
+                  state: editingPartner.state,
+                  name: editingPartner.name,
+                  distributor: editingPartner.distributor,
+                  document: editingPartner.document,
+                  email: editingPartner.email,
+                  phone: editingPartner.phone,
+                  paymentDay: editingPartner.paymentDay,
+                  bank: editingPartner.bank,
+                  agencyAccount: editingPartner.agencyAccount,
+                  pixKey: editingPartner.pixKey,
+                  volumeCupBox: editingPartner.volumeCupBox,
+                  volume10L: editingPartner.volume10L,
+                  volume20L: editingPartner.volume20L,
+                  volume1500ml: editingPartner.volume1500ml,
+                  volumeTotal: editingPartner.volumeTotal,
+                  status: editingPartner.status,
+                }
+              : undefined
+          }
+          onSubmit={handleSavePartner}
         />
       </DrawerForm>
 

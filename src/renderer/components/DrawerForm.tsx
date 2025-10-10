@@ -1,5 +1,5 @@
 import type { ReactNode, FormEvent } from 'react'
-import { Dialog } from '@/components/ui/dialog'
+import { Dialog, type DialogProps } from '@/components/ui/dialog'
 
 export type DrawerFormProps = {
   open: boolean
@@ -10,6 +10,7 @@ export type DrawerFormProps = {
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
   children: ReactNode
   footer?: ReactNode
+  size?: DialogProps['size']
 }
 
 export function DrawerForm({
@@ -21,6 +22,7 @@ export function DrawerForm({
   onSubmit,
   children,
   footer,
+  size = 'lg',
 }: DrawerFormProps) {
   return (
     <Dialog
@@ -28,6 +30,7 @@ export function DrawerForm({
       onClose={onClose}
       title={title}
       description={description}
+      size={size}
       footer={
         footer ?? (
           <div className="flex gap-3">
