@@ -206,148 +206,152 @@ export function StoreForm({ defaultValues, partners, onSubmit, onCancel }: Store
   })
 
   return (
-    <form onSubmit={handleFormSubmit} className="space-y-6">
-      <section className="space-y-4 rounded-lg border border-slate-800 bg-slate-950/60 p-4">
-        <header>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
-            Identificação
-          </h3>
-          <p className="text-xs text-slate-400">Defina a marca responsável e como a loja será identificada.</p>
-        </header>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 text-sm text-slate-300">
-            <span className="font-medium text-slate-200">Marca / Parceiro</span>
-            <select
-              {...register('partnerId')}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="">Sem vínculo</option>
-              {partners.map((partner) => (
-                <option key={partner.id} value={partner.id}>
-                  {partner.name}
-                </option>
-              ))}
-            </select>
-            {errors.partnerId && <p className="text-xs text-rose-300">{errors.partnerId.message}</p>}
-          </label>
-          <label className="space-y-2 text-sm text-slate-300">
-            <span className="font-medium text-slate-200">Nome da loja *</span>
-            <input
-              {...register('name')}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
-            />
-            {errors.name && <p className="text-xs text-rose-300">{errors.name.message}</p>}
-          </label>
-          <label className="space-y-2 text-sm text-slate-300">
-            <span className="font-medium text-slate-200">Código externo</span>
-            <input
-              {...register('externalCode')}
-              placeholder="Identificador no sistema Disagua"
-              className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
-            />
-            {errors.externalCode && <p className="text-xs text-rose-300">{errors.externalCode.message}</p>}
-          </label>
-          <label className="space-y-2 text-sm text-slate-300">
-            <span className="font-medium text-slate-200">Status</span>
-            <select
-              {...register('status')}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
-            >
-              <option value="ACTIVE">Ativa</option>
-              <option value="INACTIVE">Inativa</option>
-            </select>
-            {errors.status && <p className="text-xs text-rose-300">{errors.status.message}</p>}
-          </label>
-        </div>
-      </section>
-
-      <section className="space-y-4 rounded-lg border border-slate-800 bg-slate-950/60 p-4">
-        <header>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Endereço</h3>
-          <p className="text-xs text-slate-400">
-            Sempre preencha o campo livre. Os campos estruturados podem ser completados automaticamente ou ajustados
-            manualmente.
-          </p>
-        </header>
-        <label className="space-y-2 text-sm text-slate-300">
-          <span className="font-medium text-slate-200">Endereço (texto livre) *</span>
-          <textarea
-            {...register('addressRaw')}
-            rows={3}
-            className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
-          />
-          {errors.addressRaw && <p className="text-xs text-rose-300">{errors.addressRaw.message}</p>}
-        </label>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="space-y-2 text-sm text-slate-300">
-            <span className="font-medium text-slate-200">Rua / Logradouro</span>
-            <input
-              {...register('street')}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
-            />
-            {errors.street && <p className="text-xs text-rose-300">{errors.street.message}</p>}
-          </label>
-          <div className="grid grid-cols-2 gap-4">
+    <form onSubmit={handleFormSubmit} className="flex flex-col gap-6">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <section className="flex h-full flex-col gap-4 rounded-lg border border-slate-800 bg-slate-950/60 p-4">
+          <header className="space-y-1">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Identificação</h3>
+            <p className="text-xs text-slate-400">
+              Defina a marca responsável e como a loja será identificada.
+            </p>
+          </header>
+          <div className="grid flex-1 gap-4 sm:grid-cols-2">
             <label className="space-y-2 text-sm text-slate-300">
-              <span className="font-medium text-slate-200">Número</span>
-              <input
-                {...register('number')}
-                className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
-              />
-              {errors.number && <p className="text-xs text-rose-300">{errors.number.message}</p>}
-            </label>
-            <label className="space-y-2 text-sm text-slate-300">
-              <span className="font-medium text-slate-200">Complemento</span>
-              <input
-                {...register('complement')}
-                className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
-              />
-              {errors.complement && <p className="text-xs text-rose-300">{errors.complement.message}</p>}
-            </label>
-          </div>
-          <label className="space-y-2 text-sm text-slate-300">
-            <span className="font-medium text-slate-200">Bairro</span>
-            <input
-              {...register('district')}
-              className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
-            />
-            {errors.district && <p className="text-xs text-rose-300">{errors.district.message}</p>}
-          </label>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="space-y-2 text-sm text-slate-300">
-              <span className="font-medium text-slate-200">Município *</span>
-              <input
-                {...register('city')}
-                className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
-              />
-              {errors.city && <p className="text-xs text-rose-300">{errors.city.message}</p>}
-            </label>
-            <label className="space-y-2 text-sm text-slate-300">
-              <span className="font-medium text-slate-200">UF *</span>
+              <span className="font-medium text-slate-200">Marca / Parceiro</span>
               <select
-                {...register('state')}
+                {...register('partnerId')}
                 className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
               >
-                {brazilStates.map((state) => (
-                  <option key={state} value={state}>
-                    {state}
+                <option value="">Sem vínculo</option>
+                {partners.map((partner) => (
+                  <option key={partner.id} value={partner.id}>
+                    {partner.name}
                   </option>
                 ))}
               </select>
-              {errors.state && <p className="text-xs text-rose-300">{errors.state.message}</p>}
+              {errors.partnerId && <p className="text-xs text-rose-300">{errors.partnerId.message}</p>}
+            </label>
+            <label className="space-y-2 text-sm text-slate-300">
+              <span className="font-medium text-slate-200">Nome da loja *</span>
+              <input
+                {...register('name')}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
+              />
+              {errors.name && <p className="text-xs text-rose-300">{errors.name.message}</p>}
+            </label>
+            <label className="space-y-2 text-sm text-slate-300">
+              <span className="font-medium text-slate-200">Código externo</span>
+              <input
+                {...register('externalCode')}
+                placeholder="Identificador no sistema Disagua"
+                className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
+              />
+              {errors.externalCode && <p className="text-xs text-rose-300">{errors.externalCode.message}</p>}
+            </label>
+            <label className="space-y-2 text-sm text-slate-300">
+              <span className="font-medium text-slate-200">Status</span>
+              <select
+                {...register('status')}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
+              >
+                <option value="ACTIVE">Ativa</option>
+                <option value="INACTIVE">Inativa</option>
+              </select>
+              {errors.status && <p className="text-xs text-rose-300">{errors.status.message}</p>}
             </label>
           </div>
-          <label className="space-y-2 text-sm text-slate-300">
-            <span className="font-medium text-slate-200">CEP</span>
-            <input
-              {...register('postalCode')}
-              placeholder="00000000"
-              className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
-            />
-            {errors.postalCode && <p className="text-xs text-rose-300">{errors.postalCode.message}</p>}
-          </label>
-        </div>
-      </section>
+        </section>
+
+        <section className="flex h-full flex-col gap-4 rounded-lg border border-slate-800 bg-slate-950/60 p-4">
+          <header className="space-y-1">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">Endereço</h3>
+            <p className="text-xs text-slate-400">
+              Sempre preencha o campo livre. Os campos estruturados podem ser completados automaticamente ou ajustados
+              manualmente.
+            </p>
+          </header>
+          <div className="space-y-4">
+            <label className="space-y-2 text-sm text-slate-300">
+              <span className="font-medium text-slate-200">Endereço (texto livre) *</span>
+              <textarea
+                {...register('addressRaw')}
+                rows={3}
+                className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
+              />
+              {errors.addressRaw && <p className="text-xs text-rose-300">{errors.addressRaw.message}</p>}
+            </label>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="space-y-2 text-sm text-slate-300">
+                <span className="font-medium text-slate-200">Rua / Logradouro</span>
+                <input
+                  {...register('street')}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
+                />
+                {errors.street && <p className="text-xs text-rose-300">{errors.street.message}</p>}
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <label className="space-y-2 text-sm text-slate-300">
+                  <span className="font-medium text-slate-200">Número</span>
+                  <input
+                    {...register('number')}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
+                  />
+                  {errors.number && <p className="text-xs text-rose-300">{errors.number.message}</p>}
+                </label>
+                <label className="space-y-2 text-sm text-slate-300">
+                  <span className="font-medium text-slate-200">Complemento</span>
+                  <input
+                    {...register('complement')}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
+                  />
+                  {errors.complement && <p className="text-xs text-rose-300">{errors.complement.message}</p>}
+                </label>
+              </div>
+              <label className="space-y-2 text-sm text-slate-300">
+                <span className="font-medium text-slate-200">Bairro</span>
+                <input
+                  {...register('district')}
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
+                />
+                {errors.district && <p className="text-xs text-rose-300">{errors.district.message}</p>}
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-2 text-sm text-slate-300">
+                  <span className="font-medium text-slate-200">Município *</span>
+                  <input
+                    {...register('city')}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
+                  />
+                  {errors.city && <p className="text-xs text-rose-300">{errors.city.message}</p>}
+                </label>
+                <label className="space-y-2 text-sm text-slate-300">
+                  <span className="font-medium text-slate-200">UF *</span>
+                  <select
+                    {...register('state')}
+                    className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
+                  >
+                    {brazilStates.map((state) => (
+                      <option key={state} value={state}>
+                        {state}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.state && <p className="text-xs text-rose-300">{errors.state.message}</p>}
+                </label>
+              </div>
+              <label className="space-y-2 text-sm text-slate-300">
+                <span className="font-medium text-slate-200">CEP</span>
+                <input
+                  {...register('postalCode')}
+                  placeholder="00000000"
+                  className="w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
+                />
+                {errors.postalCode && <p className="text-xs text-rose-300">{errors.postalCode.message}</p>}
+              </label>
+            </div>
+          </div>
+        </section>
+      </div>
 
       <section className="space-y-4 rounded-lg border border-slate-800 bg-slate-950/60 p-4">
         <header className="space-y-1">
@@ -379,12 +383,12 @@ export function StoreForm({ defaultValues, partners, onSubmit, onCancel }: Store
         </div>
       </section>
 
-      <div className="flex items-center justify-end gap-3">
+      <div className="flex flex-wrap items-center justify-end gap-3 rounded-lg border border-slate-800 bg-slate-950/60 p-4 shadow-sm xl:sticky xl:bottom-0 xl:z-10 xl:backdrop-blur">
         {onCancel && (
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 hover:border-slate-500"
+            className="rounded-lg border border-slate-700 px-4 py-2 text-sm text-slate-200 transition hover:border-slate-500"
           >
             Cancelar
           </button>

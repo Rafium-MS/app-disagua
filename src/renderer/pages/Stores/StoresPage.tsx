@@ -380,6 +380,7 @@ export function StoresPage({ query }: RouteComponentProps) {
         description="Preencha os campos para cadastrar ou atualizar a unidade."
         onSubmit={(event) => event.preventDefault()}
         footer={null}
+        size="xl"
       >
         <StoreForm
           partners={partnersSeed.map((partner) => ({ id: partner.id, name: partner.name }))}
