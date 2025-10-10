@@ -8,27 +8,28 @@ datasource db {
 }
 
 model Partner {
-  id         Int       @id @default(autoincrement())
-  name       String
-  document   String    @unique
-  email      String?   @unique
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  reports    Report[]
-  vouchers   Voucher[]
+  id        Int       @id @default(autoincrement())
+  name      String
+  document  String    @unique
+  email     String?   @unique
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  reports   Report[]
+  vouchers  Voucher[]
+  stores    Store[]
 }
 
 model Report {
-  id         Int       @id @default(autoincrement())
-  partnerId  Int
-  title      String
-  issuedAt   DateTime  @default(now())
-  summary    String?
-  partner    Partner   @relation(fields: [partnerId], references: [id])
-  vouchers   Voucher[]
+  id        Int       @id @default(autoincrement())
+  partnerId Int
+  title     String
+  issuedAt  DateTime  @default(now())
+  summary   String?
+  partner   Partner   @relation(fields: [partnerId], references: [id])
+  vouchers  Voucher[]
 
-  @@index([partnerId])
   @@unique([partnerId, title])
+  @@index([partnerId])
 }
 
 model Voucher {
@@ -36,14 +37,17 @@ model Voucher {
   code       String    @unique
   partnerId  Int
   reportId   Int?
+  storeId    String?
   issuedAt   DateTime  @default(now())
   redeemedAt DateTime?
   filePath   String?
   partner    Partner   @relation(fields: [partnerId], references: [id])
   report     Report?   @relation(fields: [reportId], references: [id])
+  store      Store?    @relation(fields: [storeId], references: [id])
 
   @@index([partnerId])
   @@index([reportId])
+  @@index([storeId])
 }
 
 model AuditLog {
@@ -58,4 +62,29 @@ model AuditLog {
   requestUrl    String?
   ipAddress     String?
   changes       String?
+}
+
+model Store {
+  id             String    @id @default(cuid())
+  partnerId      Int?
+  partner        Partner?  @relation(fields: [partnerId], references: [id])
+  name           String
+  externalCode   String?   @unique
+  addressRaw     String
+  street         String?
+  number         String?
+  complement     String?
+  district       String?
+  city           String
+  state          String
+  postalCode     String?
+  geoLat         Decimal?
+  geoLng         Decimal?
+  unitValueCents Int?
+  status         String    @default("ACTIVE")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  vouchers       Voucher[]
+
+  @@index([partnerId])
 }
