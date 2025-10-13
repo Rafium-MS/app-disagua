@@ -69,6 +69,13 @@ Projeto base com:
 
 Variáveis podem ser definidas em um arquivo `.env` na raiz do projeto ou exportadas diretamente no shell antes de executar os scripts.
 
+Para habilitar o fluxo de autenticação, defina também:
+
+- `JWT_SECRET`: segredo usado para assinar o token de acesso (default `dev-secret`).
+- `JWT_EXPIRES_IN`: duração do token curto (ex.: `15m`).
+- `REFRESH_EXPIRES_DAYS`: validade em dias do refresh token (ex.: `30`).
+- `ADMIN_EMAIL` / `ADMIN_PASSWORD`: credenciais usadas para gerar o usuário administrador inicial durante o seed.
+
 ## Scripts
 
 - `npm run dev`: inicia Vite (renderer) e Electron (app), e o servidor Express embutido (porta 5174).
@@ -84,9 +91,22 @@ Variáveis podem ser definidas em um arquivo `.env` na raiz do projeto ou export
 - `npm run build:renderer`: gera os assets da UI com Vite.
 - `npm run build`: executa `build:main` e `build:renderer` para um pacote completo.
 
+## Autenticação e RBAC
+
+- O seed (`npm run db:setup`) garante a criação dos papéis `OPERADOR`, `SUPERVISOR` e `ADMIN`, além de um usuário administrador com as credenciais definidas em `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
+- Após o primeiro login, utilize `/auth/change-password` para alterar a senha do administrador inicial.
+- Login (`POST /auth/login`) usa email + senha, devolve o perfil autenticado e define cookies httpOnly (`access_token` e `refresh_token`).
+- Renovação (`POST /auth/refresh`) rotaciona o refresh token persistido (hash SHA-256) e retorna um novo access token.
+- Logout (`POST /auth/logout`) revoga o refresh token ativo e limpa os cookies.
+- Perfil (`GET /auth/me`), troca de senha (`POST /auth/change-password`) e reset (`POST /auth/reset-password`, exclusivo para ADMIN) completam o ciclo de credenciais.
+- Todas as rotas com mutação registram audit trail (`LOGIN`, `LOGOUT`, `REFRESH`, `CHANGE_PASSWORD`, `RESET_PASSWORD`, `CREATE_USER`, `UPDATE_USER`, `DELETE_USER`, `GRANT_ROLE`, `REVOKE_ROLE`).
+- A UI apresenta uma página de gestão (`#/users`) restrita a ADMIN, com criação/edição, redefinição de senha temporária e atribuição de papéis.
+
 ## Rotas do servidor
 
 - `GET /health` → retorna `{ "ok": true }`.
+- Autenticação: `POST /auth/login`, `POST /auth/logout`, `POST /auth/refresh`, `GET /auth/me`, `POST /auth/change-password`, `POST /auth/reset-password`.
+- Gestão de usuários (ADMIN): `GET /api/users`, `POST /api/users`, `PATCH /api/users/:id`, `DELETE /api/users/:id`, `PATCH /api/users/:id/roles`.
 - `GET /partners` → lista parceiros cadastrados ordenados por nome (aceita `?search=` para filtrar por nome, documento ou email).
 - `GET /reports` → lista relatórios com parceiro associado e data de emissão (aceita `?partnerId=` para filtrar por parceiro).
 - `GET /vouchers` → lista vouchers emitidos, com parceiro relacionado e status de resgate (aceita `?status=pending|redeemed`, `?partnerId=` para filtrar por parceiro e `?reportId=` para filtrar por relatório).
@@ -161,6 +181,7 @@ Para adicionar mais componentes shadcn no futuro, você pode usar o CLI oficial 
 
 - Em `dev`, Vite serve a UI na porta 5173; Electron carrega essa URL. O servidor Express escuta na 5174.
 - O script `npm run build` produz a UI final e compila o processo principal do Electron para distribuição local.
+- Tokens de acesso são curtos e armazenados apenas em memória; os refresh tokens ficam em cookies httpOnly com hash SHA-256 no banco para permitir rotação segura.
 
 ## Testes
 

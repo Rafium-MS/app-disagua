@@ -17,3 +17,10 @@ export function getRequestContext() {
 export function runWithRequestContext<T>(context: RequestContext, callback: () => Promise<T> | T) {
   return requestContextStorage.run(context, callback)
 }
+
+export function setRequestActor(actor: string | null) {
+  const context = requestContextStorage.getStore()
+  if (context) {
+    context.actor = actor
+  }
+}

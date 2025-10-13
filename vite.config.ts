@@ -18,6 +18,10 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:5174',
         changeOrigin: true
+      },
+      '/auth': {
+        target: 'http://localhost:5174',
+        changeOrigin: true
       }
     }
   },
@@ -25,6 +29,10 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
+        target: 'http://localhost:5174',
+        changeOrigin: true
+      },
+      '/auth': {
         target: 'http://localhost:5174',
         changeOrigin: true
       }

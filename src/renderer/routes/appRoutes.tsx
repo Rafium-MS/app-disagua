@@ -1,7 +1,19 @@
 import { lazy } from 'react'
 import type { LazyExoticComponent } from 'react'
 import type { RouteComponentProps } from '../types/router'
-import { BarChart3, Building2, FileSpreadsheet, Layers, Search, Upload, Users2 } from 'lucide-react'
+import {
+  BarChart3,
+  Building2,
+  FileSpreadsheet,
+  Layers,
+  LogIn,
+  LogOut,
+  Search,
+  Upload,
+  Users,
+  Users2,
+} from 'lucide-react'
+import type { UserRoleName } from '@shared/auth'
 
 export type RouteComponent = LazyExoticComponent<(
   props: RouteComponentProps,
@@ -13,9 +25,28 @@ export type RouteDefinition = {
   label: string
   icon: React.ComponentType<{ className?: string }>
   sidebar?: boolean
+  requiresAuth?: boolean
+  requiredRoles?: UserRoleName[]
 }
 
 export const routeDefinitions: RouteDefinition[] = [
+  {
+    path: '/login',
+    label: 'Login',
+    icon: LogIn,
+    component: lazy(() => import('../pages/Auth/LoginPage').then((module) => ({
+      default: module.LoginPage,
+    }))),
+    requiresAuth: false,
+  },
+  {
+    path: '/logout',
+    label: 'Sair',
+    icon: LogOut,
+    component: lazy(() => import('../pages/Auth/LogoutPage').then((module) => ({
+      default: module.LogoutPage,
+    }))),
+  },
   {
     path: '/partners',
     label: 'Parceiros',
@@ -102,5 +133,15 @@ export const routeDefinitions: RouteDefinition[] = [
     component: lazy(() => import('../pages/Reports/ReportDetailPage').then((module) => ({
       default: module.ReportDetailPage,
     }))),
+  },
+  {
+    path: '/users',
+    label: 'Usuários',
+    icon: Users,
+    component: lazy(() => import('../pages/Users/UsersPage').then((module) => ({
+      default: module.UsersPage,
+    }))),
+    sidebar: true,
+    requiredRoles: ['ADMIN'],
   },
 ]

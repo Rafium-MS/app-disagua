@@ -5,10 +5,7 @@ describe('App', () => {
   it('renderiza layout principal com navegação', () => {
     const markup = renderToString(<App />)
 
-    expect(markup).toContain('Diságua')
-    expect(markup).toContain('Parceiros')
-    expect(markup).toContain('Importar Comprovantes')
-    expect(markup).toContain('Relatórios')
-    expect(markup).toContain('Carregando página')
+    expect(markup).toContain('Gerenciador de Parceiros')
+    expect(markup).toContain('Acesse sua conta para continuar')
   })
 })
