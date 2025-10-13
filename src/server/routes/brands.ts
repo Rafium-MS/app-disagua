@@ -1,4 +1,5 @@
-import type { Prisma, PrismaClient } from '@prisma/client'
+import { Prisma } from '@prisma/client'
+import type { PrismaClient } from '@prisma/client'
 import { Router } from 'express'
 import { z } from 'zod'
 

@@ -1,5 +1,5 @@
 import { lazy } from 'react'
-import type { LazyExoticComponent } from 'react'
+import type { ComponentType, LazyExoticComponent } from 'react'
 import type { RouteComponentProps } from '../types/router'
 import {
   BarChart3,
@@ -14,10 +14,11 @@ import {
   Users2,
 } from 'lucide-react'
 import type { UserRoleName } from '@shared/auth'
+import { LoginPage } from '../pages/Auth/LoginPage'
 
-export type RouteComponent = LazyExoticComponent<(
-  props: RouteComponentProps,
-) => JSX.Element>
+export type RouteComponent =
+  | LazyExoticComponent<(props: RouteComponentProps) => JSX.Element>
+  | ComponentType<RouteComponentProps>
 
 export type RouteDefinition = {
   path: string
@@ -34,9 +35,7 @@ export const routeDefinitions: RouteDefinition[] = [
     path: '/login',
     label: 'Login',
     icon: LogIn,
-    component: lazy(() => import('../pages/Auth/LoginPage').then((module) => ({
-      default: module.LoginPage,
-    }))),
+    component: LoginPage,
     requiresAuth: false,
   },
   {
