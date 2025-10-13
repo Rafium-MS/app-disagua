@@ -7,24 +7,6 @@ datasource db {
   url      = "file:./dev.db"
 }
 
-enum StoreStatus {
-  ACTIVE
-  INACTIVE
-}
-
-enum ProductType {
-  GALAO_20L
-  GALAO_10L
-  PET_1500ML
-  CAIXA_COPO
-  VASILHAME
-}
-
-enum UserStatus {
-  ACTIVE
-  INACTIVE
-}
-
 model Partner {
   id          Int       @id @default(autoincrement())
   name        String
@@ -114,7 +96,7 @@ model User {
   email         String         @unique
   name          String
   passwordHash  String
-  status        UserStatus     @default(ACTIVE)
+  status        String         @default("ACTIVE")
   failedLogins  Int            @default(0)
   lastLoginAt   DateTime?
   lastLoginIp   String?
@@ -175,7 +157,7 @@ model Store {
   city           String
   state          String
   postalCode     String?
-  status         StoreStatus @default(ACTIVE)
+  status         String      @default("ACTIVE")
   prices         StorePrice[]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
@@ -189,7 +171,7 @@ model StorePrice {
   id        String   @id @default(cuid())
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product   ProductType
+  product   String
   unitCents Int
 
   @@unique([storeId, product])
