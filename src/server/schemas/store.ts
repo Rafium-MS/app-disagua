@@ -1,4 +1,4 @@
-import { z } from 'zod'
+import { z, type AnyZodObject } from 'zod'
 
 import { storeProductTypes } from '@shared/store-utils'
 
@@ -61,7 +61,18 @@ const optionalString = z
 
 const cnpjRegex = /^(\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}|\d{14})$/
 
-export const storeBaseSchema = z
+const applyBrandSelectionValidation = <Schema extends AnyZodObject>(schema: Schema) =>
+  schema.superRefine((value, ctx) => {
+    if (value.brandId && value.createBrand) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['createBrand'],
+        message: 'Escolha uma marca existente ou cadastre uma nova, não ambos.',
+      })
+    }
+  })
+
+const storeBaseObject = z
   .object({
     partnerId: z.coerce.number().int().positive(),
     brandId: z
@@ -99,21 +110,14 @@ export const storeBaseSchema = z
     status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
     prices: z.array(storePriceSchema).default([]),
   })
-  .superRefine((value, ctx) => {
-    if (value.brandId && value.createBrand) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ['createBrand'],
-        message: 'Escolha uma marca existente ou cadastre uma nova, não ambos.',
-      })
-    }
-  })
+
+export const storeBaseSchema = applyBrandSelectionValidation(storeBaseObject)
 
 export const storeCreateSchema = storeBaseSchema
 
-export const storeUpdateSchema = storeBaseSchema.partial({ partnerId: true }).extend({
-  partnerId: z.coerce.number().int().positive().optional(),
-})
+export const storeUpdateSchema = applyBrandSelectionValidation(
+  storeBaseObject.partial({ partnerId: true })
+)
 
 export const storeImportMappingSchema = z
   .object({
