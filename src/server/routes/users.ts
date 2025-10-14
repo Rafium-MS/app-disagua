@@ -95,7 +95,7 @@ usersRouter.get('/', async (req, res) => {
 
   const skip = (page - 1) * pageSize
 
-  const [users, total] = await prisma.$transaction([
+  const [users, total] = await Promise.all([
     prisma.user.findMany({
       where,
       skip,
@@ -253,21 +253,24 @@ usersRouter.patch('/:id/roles', async (req, res) => {
   const addedRoles = Array.from(newRoles).filter((role) => !existingRoles.has(role))
   const removedRoles = Array.from(existingRoles).filter((role) => !newRoles.has(role))
 
-  await prisma.$transaction([
-    prisma.userRole.deleteMany({
-      where: { userId: id, role: { name: { notIn: Array.from(newRoles) } } },
-    }),
-    ...Array.from(newRoles)
-      .filter((role) => !existingRoles.has(role))
-      .map((role) =>
-        prisma.userRole.create({
-          data: {
-            userId: id,
-            role: { connect: { name: role } },
-          },
-        }),
-      ),
-  ])
+  await prisma.userRole.deleteMany({
+    where: { userId: id, role: { name: { notIn: Array.from(newRoles) } } },
+  })
+
+  const creationTasks = Array.from(newRoles)
+    .filter((role) => !existingRoles.has(role))
+    .map((role) =>
+      prisma.userRole.create({
+        data: {
+          userId: id,
+          role: { connect: { name: role } },
+        },
+      }),
+    )
+
+  if (creationTasks.length) {
+    await Promise.all(creationTasks)
+  }
 
   for (const role of addedRoles) {
     await recordAuditLog({ action: 'GRANT_ROLE', entity: 'User', entityId: id, changes: { role } })

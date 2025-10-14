@@ -3,7 +3,28 @@ import { useAuth } from '@/hooks/useAuth'
 import { useNavigate } from '@/routes/RouterProvider'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
-import { useToast } from '@/components/ui/toast'
+import { useToast, type ToastVariant } from '@/components/ui/toast'
+
+type LoginDependencies = {
+  signIn: (credentials: { email: string; password: string }) => Promise<boolean>
+  toast: (toast: { title: string; description?: string; variant?: ToastVariant }) => void
+  navigate: (path: string, options?: { replace?: boolean }) => void
+}
+
+export async function handleLoginAttempt(
+  dependencies: LoginDependencies,
+  credentials: { email: string; password: string },
+) {
+  const success = await dependencies.signIn(credentials)
+  if (!success) {
+    return { success: false as const, error: 'Credenciais inválidas. Verifique email e senha.' }
+  }
+
+  dependencies.toast({ title: 'Bem-vindo de volta!', variant: 'success' })
+  dependencies.navigate('/partners', { replace: true })
+
+  return { success: true as const }
+}
 
 export function LoginPage() {
   const { signIn, loading, user } = useAuth()
@@ -25,14 +46,12 @@ export function LoginPage() {
     event.preventDefault()
     setSubmitting(true)
     setError(null)
-    const success = await signIn({ email, password })
+    const result = await handleLoginAttempt({ signIn, toast, navigate }, { email, password })
     setSubmitting(false)
-    if (!success) {
-      setError('Credenciais inválidas. Verifique email e senha.')
+    if (!result.success) {
+      setError(result.error)
       return
     }
-    toast({ title: 'Bem-vindo de volta!', variant: 'success' })
-    navigate('/partners', { replace: true })
   }
 
   return (

@@ -18,8 +18,16 @@ import { recordAuditLog } from '../utils/audit'
 import { setRequestActor } from '../context'
 import type { UserRoleName } from '../../shared/auth'
 
+const loginEmailSchema = z
+  .string()
+  .trim()
+  .min(3)
+  .refine((value) => /^[^@\s]+@[^@\s]+$/.test(value), {
+    message: 'E-mail inválido',
+  })
+
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: loginEmailSchema,
   password: z.string().min(1),
 })
 

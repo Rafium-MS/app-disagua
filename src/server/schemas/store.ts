@@ -4,15 +4,39 @@ import { storeProductTypes } from '@shared/store-utils'
 
 export const productEnum = z.enum(storeProductTypes)
 
-const cuidRegex = /^c[a-z0-9]{24}$/i
-
 const brandCodeSchema = z
   .string()
   .trim()
   .max(32)
   .optional()
   .nullable()
-  .transform((value) => (value ? value : null))
+  .transform((value) => {
+    if (value === undefined) {
+      return undefined
+    }
+    if (value === null) {
+      return null
+    }
+    const trimmed = value.trim()
+    return trimmed.length ? trimmed : null
+  })
+
+const brandIdSchema = z
+  .string()
+  .trim()
+  .min(1, 'Identificador de marca inválido')
+  .optional()
+  .nullable()
+  .transform((value) => {
+    if (value === undefined) {
+      return undefined
+    }
+    if (value === null) {
+      return null
+    }
+    const trimmed = value.trim()
+    return trimmed.length ? trimmed : null
+  })
 
 export const brandSchema = z
   .object({
@@ -75,13 +99,7 @@ const applyBrandSelectionValidation = <Schema extends AnyZodObject>(schema: Sche
 const storeBaseObject = z
   .object({
     partnerId: z.coerce.number().int().positive(),
-    brandId: z
-      .string()
-      .trim()
-      .regex(cuidRegex, 'Identificador de marca inválido')
-      .optional()
-      .nullable()
-      .transform((value) => (value ? value : null)),
+    brandId: brandIdSchema,
     createBrand: createBrandSchema.optional(),
     name: z.string().trim().min(2),
     externalCode: optionalString,

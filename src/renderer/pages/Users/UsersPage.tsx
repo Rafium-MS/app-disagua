@@ -7,6 +7,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/ui/toast'
 import { USER_ROLES, type UserRoleName } from '@shared/auth'
 
+export function userCanAccessUsersPage(hasRole: (role: UserRoleName) => boolean) {
+  return hasRole('ADMIN')
+}
+
 const PAGE_SIZE = 10
 
 type UserListItem = {
@@ -87,7 +91,7 @@ export function UsersPage() {
   )
 
   useEffect(() => {
-    if (!hasRole('ADMIN')) {
+    if (!userCanAccessUsersPage(hasRole)) {
       setLoading(false)
       return
     }
@@ -226,7 +230,7 @@ export function UsersPage() {
     await loadUsers(pagination.page)
   }
 
-  if (!hasRole('ADMIN')) {
+  if (!userCanAccessUsersPage(hasRole)) {
     return (
       <div className="rounded-2xl border border-border bg-card p-6 text-center">
         <h2 className="text-lg font-semibold text-fg">Acesso restrito</h2>

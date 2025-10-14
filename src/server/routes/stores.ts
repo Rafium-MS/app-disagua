@@ -33,16 +33,15 @@ const storeDefaultInclude = {
 
 type StoreWithRelations = Prisma.StoreGetPayload<{ include: typeof storeDefaultInclude }>
 
-const cuidRegex = /^c[a-z0-9]{24}$/i
-
 const listSchema = z
   .object({
     partnerId: z.coerce.number().int().positive().optional(),
     brandId: z
       .string()
       .trim()
-      .regex(cuidRegex, 'Identificador de marca inválido')
-      .optional(),
+      .min(1, 'Identificador de marca inválido')
+      .optional()
+      .transform((value) => (typeof value === 'string' && value.length ? value : undefined)),
     q: z
       .string()
       .trim()
@@ -79,8 +78,8 @@ const detectSchema = z
 
 const mergeSchema = z
   .object({
-    targetId: z.string().regex(cuidRegex, 'Loja alvo inválida'),
-    sourceIds: z.array(z.string().regex(cuidRegex, 'Loja de origem inválida')).min(1),
+    targetId: z.string().trim().min(1, 'Loja alvo inválida'),
+    sourceIds: z.array(z.string().trim().min(1, 'Loja de origem inválida')).min(1),
     fieldsStrategy: z.enum(['target', 'source', 'mostRecent']).default('target'),
   })
   .strict()
@@ -426,7 +425,11 @@ function mapPrices(prices: Array<{ product?: ProductValue | null; unitValueBRL?:
   return prices
     .filter((price) => price?.product && productValues.includes(price.product))
     .map((price) => {
-      const cents = brlToCents(price.unitValueBRL)
+      const rawValue = price.unitValueBRL
+      if (typeof rawValue === 'string' && rawValue.trim().length === 0) {
+        return null
+      }
+      const cents = brlToCents(rawValue)
       if (cents == null) return null
       return { product: price.product as ProductValue, unitCents: cents }
     })
