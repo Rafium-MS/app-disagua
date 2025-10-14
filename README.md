@@ -92,6 +92,44 @@ Para habilitar o fluxo de autenticação, defina também:
 - `npm run build:renderer`: gera os assets da UI com Vite.
 - `npm run build`: executa `build:main` e `build:renderer` para um pacote completo.
 
+## Cadastro por Marca
+
+1. Acesse a página **Marcas** (`#/brands`) para cadastrar as marcas vinculadas a cada parceiro.
+   - Informe o parceiro responsável, o nome da marca e, opcionalmente, um código interno.
+   - A listagem permite filtrar por parceiro e buscar por nome/código. Apenas usuários com papel **ADMIN** podem criar, editar ou remover marcas.
+2. Ao selecionar uma marca, navegue para **Lojas** (`#/brands/:brandId/stores`) para visualizar e gerenciar as lojas daquela marca.
+   - Filtre por cidade, UF, shopping, status ou texto livre.
+   - Utilize os botões **Nova loja** e **Importar XLSX** para cadastrar registros manualmente ou em lote.
+
+### Exemplo de payload `POST /api/stores`
+
+```json
+{
+  "partnerId": "1",
+  "brandId": "bra_123",
+  "name": "Loja Centro",
+  "deliveryPlace": "Rua das Flores, 120 - Centro",
+  "addressRaw": "Rua das Flores, 120 - Centro, Belo Horizonte - MG, 30123-000",
+  "city": "Belo Horizonte",
+  "state": "MG",
+  "mall": null,
+  "cnpj": "12.345.678/0001-90",
+  "phone": "(31) 3333-0000",
+  "email": "contato@lojacentro.com.br",
+  "status": "ACTIVE",
+  "prices": [
+    { "product": "GALAO_20L", "unitValueBRL": "R$ 25,00" },
+    { "product": "PET_1500ML", "unitValueBRL": "R$ 6,50" }
+  ]
+}
+```
+
+> **Observações rápidas**
+>
+> - `deliveryPlace` é obrigatório e descreve o ponto de entrega principal.
+> - O endereço estruturado (`street`, `number`, `city`, `state`, etc.) é opcional. Quando `addressRaw` é informado, o backend tenta preencher esses campos automaticamente.
+> - Preços são informados por produto e armazenados em centavos (`StorePrice`). Somente entradas preenchidas são persistidas.
+
 ## Autenticação e RBAC
 
 - O seed (`npm run db:setup`) garante a criação dos papéis `OPERADOR`, `SUPERVISOR` e `ADMIN`, além de um usuário administrador com as credenciais definidas em `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
@@ -114,46 +152,38 @@ Para habilitar o fluxo de autenticação, defina também:
 - `POST /reports/:id/export` → gera um arquivo consolidado (PDF ou ZIP) com os comprovantes do relatório informado, registra o evento na auditoria e retorna o caminho gerado.
 - `GET /stats` → retorna contagens de parceiros, relatórios e vouchers (resgatados e pendentes).
 - `GET /audit-logs` → consulta o histórico de auditoria com filtros opcionais (`entity`, `action`, `actor`, `from`, `to`, `page`, `pageSize`).
-- `GET /api/brands` → busca marcas por parceiro com filtros `q`, `page` e `pageSize`.
-- `POST /api/brands` → cria marca vinculada a um parceiro (valida duplicidade por nome/código).
+- `GET /api/brands` → busca marcas por parceiro com filtros `q`, `page` e `size`.
+- `GET /api/brands/:id` → retorna detalhes da marca com o parceiro associado.
+- `POST /api/brands` → cria marca vinculada a um parceiro (valida duplicidade por nome).
 - `PATCH /api/brands/:id` → atualiza nome/código da marca.
 - `DELETE /api/brands/:id` → remove uma marca (cascata nas lojas).
-- `GET /api/stores` → lista lojas com filtros por parceiro, marca, cidade, UF, shopping, status e busca livre.
-- `GET /api/stores/:id` → carrega uma loja com marca, parceiro e grade de preços.
-- `POST /api/stores` → cria loja (opcionalmente cria marca rápida) calculando `normalizedName` e salvando preços em centavos.
-- `PATCH /api/stores/:id` → atualiza dados e substitui preços vigentes.
-- `DELETE /api/stores/:id` → remove loja e preços associados.
+- `GET /api/stores` → lista lojas com filtros por marca, cidade, UF, shopping, status e busca livre.
+- `GET /api/stores/:id` → carrega uma loja com marca, parceiro e preços.
+- `POST /api/stores` → cria loja calculando `normalizedName` e persistindo os preços informados.
+- `PATCH /api/stores/:id` → atualiza dados básicos e substitui toda a grade de preços.
+- `DELETE /api/stores/:id` → remove loja e preços associados (restrito a ADMIN).
 - `POST /api/stores/import` → importa/atualiza lojas via XLSX (vide seção abaixo) com resumo de criados/atualizados/ignorados.
-- `POST /api/stores/detect-duplicates` → retorna grupos candidatos a duplicidade por CNPJ ou nome/cidade.
-- `POST /api/stores/merge` → mescla registros duplicados, movendo preços e vouchers para o alvo.
 
 As rotas que criam, atualizam ou removem registros geram automaticamente entradas na tabela de auditoria, incluindo operações em lote (`createMany`, `updateMany`, `deleteMany`). Para informar o usuário responsável pela alteração, envie o cabeçalho `X-Actor-Id` (ou `X-User-Id`) na requisição.
 
 Servidor embutido é iniciado pelo processo principal do Electron. No modo `dev`, a UI roda em `http://localhost:5173` e o servidor em `http://localhost:5174`. Em produção, configure a variável `CORS_ALLOWED_ORIGINS` (lista separada por vírgulas) para liberar apenas origens confiáveis.
 
-## Importação e deduplicação de lojas
+## Importação de lojas (XLSX)
 
-### Importar XLSX pela API/UI
+### Importar pela UI/API
 
-1. Acesse `/stores/import` na UI ou envie `POST /api/stores/import` com `multipart/form-data` contendo `file` (planilha) e `mapping` (JSON com as colunas, ex.: `{ "colPartner": "Parceiro", "colStoreName": "Nome", "colCity": "Cidade", "colState": "UF" }`).
-2. Campos opcionais incluem marca, shopping, endereço e preços (`colValue20L`, `colValue10L`, `colValue1500`, `colValueCopo`, `colValueVasilhame`).
-3. Use `allowCreateBrand=true` para criar marcas automaticamente quando inexistentes para o parceiro.
-4. A resposta retorna `{ created, updated, skipped, conflicts[] }` com detalhes de linhas ignoradas ou conflitos de unicidade.
+1. Acesse `/stores/import` e selecione a planilha (`.xlsx`). A UI detecta automaticamente as colunas disponíveis.
+2. Informe o mapeamento entre as colunas e os campos exigidos:
+   - **Obrigatórios**: `colPartner`, `colBrand`, `colStoreName`, `colDeliveryPlace`.
+   - **Opcionais**: `colAddressRaw`, `colCity`, `colState`, `colMall`, `colCNPJ`, `colPhone`, `colEmail`, `colPrice20L`, `colPrice10L`, `colPrice1500`, `colPriceCopo`, `colPriceVasilhame`.
+3. Marque **Permitir criação de novas marcas** se desejar que o backend crie a marca automaticamente quando não encontrada para o parceiro informado.
+4. Envie o formulário. A resposta retorna `{ created, updated, skipped, conflicts[] }` com o resultado da importação.
 
-### Importar XLSX pelo script CLI
+> A API aceita `POST /api/stores/import` com `multipart/form-data` contendo `file` e `mapping` (JSON com a estrutura acima).
 
-Para sincronizar lojas diretamente via linha de comando, utilize o script `npm run import:stores`. Ele processa `data/LISTA DE LOJAS.xlsx` (primeira aba) e executa um _upsert_ de lojas, atualizando preços relacionados.
+### Script CLI
 
-- Ajuste a planilha conforme os cabeçalhos esperados (`MARCA`, `LOJA`, `COD da Disagua`, `LOCAL DA ENTREGA`, `MUNICIPIO`, `UF`, e colunas de preço como `VALOR 20L`, `VALOR 10L`, etc.).
-- O script normaliza o endereço com `parseBrazilAddress`, atualiza marcas existentes e reescreve a tabela de preços (`storePrice`) para cada loja sincronizada.
-- Para usar outra planilha ou caminho, edite `scripts/import-stores.ts` antes da execução ou crie uma cópia do arquivo adequando os cabeçalhos.
-- O output no terminal indica cada loja criada/atualizada e reporta linhas inválidas.
-
-### Deduplicação
-
-1. A UI `/stores/duplicates` consome `POST /api/stores/detect-duplicates` para listar candidatos por CNPJ ou combinação nome/cidade/mall.
-2. Acione o merge pelo botão “Mesclar registros”, que chama `POST /api/stores/merge` com `targetId`, `sourceIds[]` e `fieldsStrategy` (`target`, `source` ou `mostRecent`).
-3. Durante o merge, vouchers e preços dos registros fonte são migrados para o alvo e os duplicados são excluídos ao final da transação.
+O script `npm run import:stores` permanece disponível para sincronizações em lote a partir do arquivo padrão `data/LISTA DE LOJAS.xlsx`. Defina a variável de ambiente `PARTNER_ID` para indicar o parceiro responsável e ajuste os cabeçalhos se necessário.
 
 ## Auditoria e diretórios de dados
 

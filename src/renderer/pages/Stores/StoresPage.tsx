@@ -1,47 +1,39 @@
-import { useEffect, useState } from 'react'
-import { Building2, RefreshCw, Upload, Search, GitMerge } from 'lucide-react'
-
-import { Button } from '@/components/ui/button'
-import { useNavigate } from '@/routes/RouterProvider'
+import { useEffect, useMemo, useState } from 'react'
+import { useNavigate, useRouteInfo } from '@/routes/RouterProvider'
 import { useToast } from '@/components/ui/toast'
-import type { StoreProductType } from '@shared/store-utils'
+import { Button } from '@/components/ui/button'
 import { storeProductLabels } from '@shared/store-utils'
-
-const LOCAL_STORAGE_KEY = 'stores-filters-v1'
-
-const statusLabels: Record<'ACTIVE' | 'INACTIVE', string> = {
-  ACTIVE: 'Ativa',
-  INACTIVE: 'Inativa',
-}
-
-type PartnerOption = {
-  id: number
-  name: string
-}
+import { Loader2, Plus, Upload, Pencil, Trash2 } from 'lucide-react'
 
 type StoreListItem = {
   id: string
   name: string
-  city: string
-  state: string
+  deliveryPlace: string
+  city?: string | null
+  state?: string | null
   mall?: string | null
   status: 'ACTIVE' | 'INACTIVE'
-  externalCode?: string | null
-  cnpj?: string | null
+  prices: Array<{ product: keyof typeof storeProductLabels; unitCents: number }>
   updatedAt: string
-  partner?: { id: number; name: string | null } | null
-  prices: Array<{ product: StoreProductType; unitCents: number }>
 }
 
-type Pagination = {
-  page: number
-  pageSize: number
-  total: number
-  totalPages: number
+type StoreResponse = {
+  data: StoreListItem[]
+  pagination: {
+    page: number
+    size: number
+    total: number
+    totalPages: number
+  }
+}
+
+type BrandDetails = {
+  id: string
+  name: string
+  partner: { id: number; name: string }
 }
 
 type FiltersState = {
-  partnerId: string
   city: string
   state: string
   mall: string
@@ -51,7 +43,6 @@ type FiltersState = {
 }
 
 const initialFilters: FiltersState = {
-  partnerId: '',
   city: '',
   state: '',
   mall: '',
@@ -60,94 +51,73 @@ const initialFilters: FiltersState = {
   page: 1,
 }
 
-function formatCurrency(value?: number | null) {
-  if (value == null) {
-    return '—'
-  }
-  return (value / 100).toLocaleString('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-    minimumFractionDigits: 2,
-  })
+function formatCurrency(cents?: number) {
+  if (cents == null) return '—'
+  return (cents / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-function getPrimaryPrice(prices: StoreListItem['prices']) {
-  const priority: StoreProductType[] = ['GALAO_20L', 'GALAO_10L', 'PET_1500ML', 'CAIXA_COPO', 'VASILHAME']
-  for (const product of priority) {
-    const match = prices.find((price) => price.product === product)
-    if (match) {
-      return `${storeProductLabels[product]} · ${formatCurrency(match.unitCents)}`
-    }
+function summarizePrices(prices: StoreListItem['prices']) {
+  if (prices.length === 0) {
+    return '—'
   }
-  return prices.length > 0 ? `${storeProductLabels[prices[0].product]} · ${formatCurrency(prices[0].unitCents)}` : '—'
+  return prices
+    .map((price) => `${storeProductLabels[price.product]}: ${formatCurrency(price.unitCents)}`)
+    .join(' · ')
 }
 
 export function StoresPage() {
+  const { params } = useRouteInfo()
   const navigate = useNavigate()
   const { toast } = useToast()
+  const [brand, setBrand] = useState<BrandDetails | null>(null)
   const [stores, setStores] = useState<StoreListItem[]>([])
-  const [partners, setPartners] = useState<PartnerOption[]>([])
-  const [filters, setFilters] = useState<FiltersState>(() => {
-    if (typeof window === 'undefined') {
-      return initialFilters
-    }
-    try {
-      const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY)
-      if (!stored) return initialFilters
-      const parsed = JSON.parse(stored)
-      const { brandId: _unusedBrandId, ...rest } = typeof parsed === 'object' && parsed ? parsed : {}
-      return { ...initialFilters, ...rest }
-    } catch (error) {
-      console.warn('Não foi possível restaurar filtros salvos', error)
-      return initialFilters
-    }
-  })
-  const [pagination, setPagination] = useState<Pagination>({ page: 1, pageSize: 20, total: 0, totalPages: 0 })
+  const [pagination, setPagination] = useState({ page: 1, size: 20, total: 0, totalPages: 0 })
+  const [filters, setFilters] = useState<FiltersState>(initialFilters)
   const [loading, setLoading] = useState(false)
+  const brandId = params.brandId
 
   useEffect(() => {
-    async function loadPartners() {
+    let active = true
+    async function loadBrand() {
+      if (!brandId) return
       try {
-        const response = await fetch('/api/partners?page=1&pageSize=200')
-        if (!response.ok) throw new Error('Erro ao carregar parceiros')
-        const payload = await response.json()
-        setPartners(payload.data ?? [])
+        const response = await fetch(`/api/brands/${brandId}`)
+        if (!response.ok) throw new Error('Não foi possível carregar a marca')
+        const payload = (await response.json()) as BrandDetails
+        if (active) {
+          setBrand(payload)
+        }
       } catch (error) {
         console.error(error)
-        toast({ title: 'Erro ao carregar parceiros', variant: 'error' })
+        toast({ title: 'Erro ao carregar marca', variant: 'error' })
       }
     }
-    loadPartners()
-  }, [toast])
+    loadBrand()
+    return () => {
+      active = false
+    }
+  }, [brandId, toast])
 
   useEffect(() => {
-    if (typeof window === 'undefined') {
+    if (!brandId) {
       return
     }
-    window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ ...filters, page: filters.page }))
-  }, [filters])
-
-  useEffect(() => {
     const controller = new AbortController()
     async function loadStores() {
       setLoading(true)
       try {
-        const params = new URLSearchParams({
-          page: String(filters.page),
-          pageSize: '20',
-        })
-        if (filters.partnerId) params.set('partnerId', filters.partnerId)
+        const params = new URLSearchParams({ brandId, page: String(filters.page), size: '20' })
         if (filters.city) params.set('city', filters.city)
-        if (filters.state) params.set('state', filters.state.toUpperCase())
+        if (filters.state) params.set('state', filters.state)
         if (filters.mall) params.set('mall', filters.mall)
         if (filters.status !== 'ALL') params.set('status', filters.status)
         if (filters.q) params.set('q', filters.q)
 
         const response = await fetch(`/api/stores?${params.toString()}`, { signal: controller.signal })
-        if (!response.ok) throw new Error('Erro ao carregar lojas')
-        const payload = await response.json()
+        if (!response.ok) throw new Error('Não foi possível carregar as lojas')
+        const payload = (await response.json()) as StoreResponse
         setStores(payload.data ?? [])
-        setPagination(payload.pagination ?? { page: filters.page, pageSize: 20, total: 0, totalPages: 0 })
+        setPagination(payload.pagination ?? { page: filters.page, size: 20, total: 0, totalPages: 0 })
       } catch (error) {
         if (!controller.signal.aborted) {
           console.error(error)
@@ -159,256 +129,217 @@ export function StoresPage() {
     }
     loadStores()
     return () => controller.abort()
-  }, [filters, toast])
+  }, [brandId, filters, toast])
 
   const handleFilterChange = (patch: Partial<FiltersState>) => {
-    setFilters((previous) => {
-      const next = { ...previous, ...patch }
-      if (!('page' in patch)) {
-        next.page = 1
-      }
-      return next
-    })
+    setFilters((previous) => ({ ...previous, ...patch, page: patch.page ?? 1 }))
   }
 
-  const handleSearchSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    const formData = new FormData(event.currentTarget)
-    const q = String(formData.get('search') ?? '')
-    handleFilterChange({ q })
+  const handleDelete = async (storeId: string) => {
+    const confirmation = window.confirm('Deseja remover esta loja?')
+    if (!confirmation) {
+      return
+    }
+    try {
+      const response = await fetch(`/api/stores/${storeId}`, { method: 'DELETE' })
+      if (!response.ok) throw new Error('Não foi possível remover a loja')
+      toast({ title: 'Loja removida com sucesso', variant: 'success' })
+      setFilters((previous) => ({ ...previous }))
+    } catch (error) {
+      console.error(error)
+      toast({ title: 'Erro ao remover loja', variant: 'error' })
+    }
   }
 
-  const handleRefresh = () => {
-    setFilters((previous) => ({ ...previous }))
-  }
+  const partnerId = useMemo(() => (brand ? String(brand.partner.id) : ''), [brand])
 
   return (
     <div className="space-y-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <header className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-semibold text-fg">Lojas</h1>
           <p className="text-sm text-fg/60">
-            Cadastre e acompanhe os pontos de venda vinculados aos parceiros para controlar preços e comprovantes.
+            {brand ? `Marcas ${brand.name} · Parceiro ${brand.partner.name}` : 'Selecione uma marca para visualizar as lojas.'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => navigate('/stores/match')} className="flex items-center gap-2">
-            <GitMerge className="h-4 w-4" /> Combinar parceiros
-          </Button>
-          <Button variant="outline" onClick={handleRefresh} disabled={loading} className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4" /> Atualizar
-          </Button>
-          <Button variant="outline" onClick={() => navigate('/stores/duplicates')} className="flex items-center gap-2">
-            <Search className="h-4 w-4" /> Duplicadas
-          </Button>
-          <Button variant="outline" onClick={() => navigate('/stores/import')} className="flex items-center gap-2">
+          <Button
+            onClick={() => navigate(`/stores/import?brandId=${brandId ?? ''}&partnerId=${partnerId}`)}
+            variant="outline"
+            className="flex items-center gap-2"
+            disabled={!brandId}
+          >
             <Upload className="h-4 w-4" /> Importar XLSX
           </Button>
-          <Button onClick={() => navigate('/stores/new')} className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" /> Nova loja
+          <Button
+            onClick={() => navigate(`/stores/new?brandId=${brandId ?? ''}&partnerId=${partnerId}&brandName=${brand?.name ?? ''}`)}
+            className="flex items-center gap-2"
+            disabled={!brandId}
+          >
+            <Plus className="h-4 w-4" /> Nova loja
           </Button>
         </div>
       </header>
 
-      <div className="rounded-xl border border-border bg-card/40 p-4">
-        <form onSubmit={handleSearchSubmit} className="flex flex-col gap-3">
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="partner" className="text-sm font-medium text-fg/80">
-                Parceiro
-              </label>
-              <select
-                id="partner"
-                value={filters.partnerId}
-                onChange={(event) => handleFilterChange({ partnerId: event.target.value })}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              >
-                <option value="">Todos</option>
-                {partners.map((partner) => (
-                  <option key={partner.id} value={partner.id}>
-                    {partner.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="status" className="text-sm font-medium text-fg/80">
-                Status
-              </label>
-              <select
-                id="status"
-                value={filters.status}
-                onChange={(event) => handleFilterChange({ status: event.target.value as FiltersState['status'] })}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              >
-                <option value="ALL">Todos</option>
-                <option value="ACTIVE">Ativas</option>
-                <option value="INACTIVE">Inativas</option>
-              </select>
-            </div>
-          </div>
-          <div className="grid gap-3 md:grid-cols-4">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="city" className="text-sm font-medium text-fg/80">
-                Cidade
-              </label>
-              <input
-                id="city"
-                type="text"
-                value={filters.city}
-                onChange={(event) => handleFilterChange({ city: event.target.value })}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg/40 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="state" className="text-sm font-medium text-fg/80">
-                UF
-              </label>
-              <input
-                id="state"
-                type="text"
-                value={filters.state}
-                maxLength={2}
-                onChange={(event) => handleFilterChange({ state: event.target.value.toUpperCase() })}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg/40 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="mall" className="text-sm font-medium text-fg/80">
-                Shopping
-              </label>
-              <input
-                id="mall"
-                type="text"
-                value={filters.mall}
-                onChange={(event) => handleFilterChange({ mall: event.target.value })}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg/40 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="search" className="text-sm font-medium text-fg/80">
-                Busca rápida
-              </label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="search"
-                  name="search"
-                  defaultValue={filters.q}
-                  placeholder="Nome, código, cidade..."
-                  className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg placeholder:text-fg/40 focus:outline-none focus:ring-2 focus:ring-emerald-400"
-                />
-                <Button type="submit" variant="outline" className="px-3">
-                  <Search className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </div>
-        </form>
-      </div>
+      <section className="rounded-xl border border-border bg-card p-4 shadow-sm">
+        <div className="grid gap-3 sm:grid-cols-5">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs uppercase text-fg/60">Cidade</span>
+            <input
+              type="text"
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+              value={filters.city}
+              onChange={(event) => handleFilterChange({ city: event.target.value })}
+              placeholder="Filtrar por cidade"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs uppercase text-fg/60">UF</span>
+            <input
+              type="text"
+              maxLength={2}
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm uppercase"
+              value={filters.state}
+              onChange={(event) => handleFilterChange({ state: event.target.value.toUpperCase() })}
+              placeholder="UF"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs uppercase text-fg/60">Shopping</span>
+            <input
+              type="text"
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+              value={filters.mall}
+              onChange={(event) => handleFilterChange({ mall: event.target.value })}
+              placeholder="Filtrar por shopping"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-sm">
+            <span className="text-xs uppercase text-fg/60">Status</span>
+            <select
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+              value={filters.status}
+              onChange={(event) => handleFilterChange({ status: event.target.value as FiltersState['status'] })}
+            >
+              <option value="ALL">Todos</option>
+              <option value="ACTIVE">Ativas</option>
+              <option value="INACTIVE">Inativas</option>
+            </select>
+          </label>
+          <label className="flex flex-col gap-1 text-sm sm:col-span-2">
+            <span className="text-xs uppercase text-fg/60">Buscar</span>
+            <input
+              type="text"
+              className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+              value={filters.q}
+              onChange={(event) => handleFilterChange({ q: event.target.value })}
+              placeholder="Nome, cidade ou shopping"
+            />
+          </label>
+        </div>
+      </section>
 
-      <div className="overflow-hidden rounded-xl border border-border">
+      <section className="rounded-xl border border-border bg-card shadow-sm">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-border/60 text-sm">
-            <thead className="bg-card/60 text-xs uppercase tracking-wide text-fg/60">
+          <table className="min-w-full divide-y divide-border text-sm">
+            <thead className="bg-muted/40 text-left text-xs uppercase text-fg/70">
               <tr>
-                <th className="px-4 py-3 text-left">Loja</th>
-                <th className="px-4 py-3 text-left">Parceiro</th>
-                <th className="px-4 py-3 text-left">Localização</th>
-                <th className="px-4 py-3 text-left">Preço destaque</th>
-                <th className="px-4 py-3 text-left">Status</th>
-                <th className="px-4 py-3 text-left">Atualizada em</th>
-                <th className="px-4 py-3 text-left">Ações</th>
+                <th className="px-4 py-3 font-medium">Loja</th>
+                <th className="px-4 py-3 font-medium">Local de entrega</th>
+                <th className="px-4 py-3 font-medium">Cidade/UF</th>
+                <th className="px-4 py-3 font-medium">Shopping</th>
+                <th className="px-4 py-3 font-medium">Preços</th>
+                <th className="px-4 py-3 font-medium">Status</th>
+                <th className="px-4 py-3 text-right font-medium">Ações</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-border/60 bg-card/40">
-              {stores.map((store) => (
-                <tr key={store.id}>
-                  <td className="px-4 py-3">
-                    <div className="font-medium text-fg">{store.name}</div>
-                    <div className="text-xs text-fg/60">{store.externalCode || 'Sem código externo'}</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="text-sm text-fg">
-                      {store.partner?.name ?? '—'}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-fg/80">
-                    <div>
-                      {store.city}/{store.state}
-                    </div>
-                    {store.mall ? <div className="text-xs text-fg/60">{store.mall}</div> : null}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-fg/80">{getPrimaryPrice(store.prices)}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                        store.status === 'ACTIVE'
-                          ? 'bg-emerald-500/10 text-emerald-400'
-                          : 'bg-slate-500/10 text-slate-300'
-                      }`}
-                    >
-                      {statusLabels[store.status]}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-sm text-fg/60">
-                    {new Date(store.updatedAt).toLocaleDateString('pt-BR')}
-                  </td>
-                  <td className="px-4 py-3 text-sm text-fg">
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/stores/${store.id}/edit`)}
-                      >
-                        Editar
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {stores.length === 0 && !loading ? (
+            <tbody className="divide-y divide-border text-fg">
+              {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-10 text-center text-sm text-fg/60">
-                    Nenhuma loja encontrada com os filtros atuais.
+                  <td colSpan={7} className="px-4 py-6 text-center text-sm text-fg/60">
+                    <Loader2 className="mx-auto h-5 w-5 animate-spin" />
                   </td>
                 </tr>
-              ) : null}
+              ) : stores.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-4 py-6 text-center text-sm text-fg/60">
+                    Nenhuma loja encontrada
+                  </td>
+                </tr>
+              ) : (
+                stores.map((store) => (
+                  <tr key={store.id} className="hover:bg-muted/30">
+                    <td className="px-4 py-3 font-medium">{store.name}</td>
+                    <td className="px-4 py-3 text-sm text-fg/70">{store.deliveryPlace}</td>
+                    <td className="px-4 py-3">
+                      {store.city || '—'}
+                      {store.state ? `/${store.state}` : ''}
+                    </td>
+                    <td className="px-4 py-3">{store.mall ?? '—'}</td>
+                    <td className="px-4 py-3 text-sm text-fg/70">{summarizePrices(store.prices)}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+                          store.status === 'ACTIVE' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300'
+                        }`}
+                      >
+                        {store.status === 'ACTIVE' ? 'Ativa' : 'Inativa'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/stores/${store.id}/edit?brandId=${brandId ?? ''}`)}
+                          className="flex items-center gap-2"
+                        >
+                          <Pencil className="h-4 w-4" /> Editar
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => handleDelete(store.id)}
+                          className="flex items-center gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" /> Remover
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
-        {loading ? (
-          <div className="flex items-center justify-center gap-2 py-6 text-sm text-fg/60">
-            <RefreshCw className="h-4 w-4 animate-spin" /> Carregando lojas...
+        <div className="flex items-center justify-between border-t border-border px-4 py-3 text-xs text-fg/60">
+          <span>
+            Página {pagination.page} de {Math.max(pagination.totalPages ?? 1, 1)} · {pagination.total} registro(s)
+          </span>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pagination.page <= 1}
+              onClick={() => setFilters((previous) => ({ ...previous, page: Math.max(previous.page - 1, 1) }))}
+            >
+              Anterior
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={pagination.page >= (pagination.totalPages || 1)}
+              onClick={() =>
+                setFilters((previous) => ({ ...previous, page: Math.min(previous.page + 1, pagination.totalPages || 1) }))
+              }
+            >
+              Próxima
+            </Button>
           </div>
-        ) : null}
-      </div>
-
-      <div className="flex items-center justify-between text-sm text-fg/70">
-        <div>
-          Página {pagination.page} de {pagination.totalPages || 1} • {pagination.total} lojas no total
         </div>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handleFilterChange({ page: Math.max(1, pagination.page - 1) })}
-            disabled={loading || pagination.page <= 1}
-          >
-            Anterior
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => handleFilterChange({ page: Math.min(pagination.totalPages || 1, pagination.page + 1) })}
-            disabled={loading || pagination.page >= (pagination.totalPages || 1)}
-          >
-            Próxima
-          </Button>
-        </div>
-      </div>
+      </section>
     </div>
   )
 }

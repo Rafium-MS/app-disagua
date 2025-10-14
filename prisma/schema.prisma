@@ -30,6 +30,14 @@ model Partner {
   brands      Brand[]
 }
 
+enum ProductType {
+  GALAO_20L
+  GALAO_10L
+  PET_1500ML
+  CAIXA_COPO
+  VASILHAME
+}
+
 model Brand {
   id        String   @id @default(cuid())
   partnerId Int
@@ -42,6 +50,11 @@ model Brand {
   stores Store[]
 
   @@unique([partnerId, name])
+}
+
+enum StoreStatus {
+  ACTIVE
+  INACTIVE
 }
 
 model Report {
@@ -140,49 +153,39 @@ model Store {
   id             String      @id @default(cuid())
   partnerId      Int
   partner        Partner     @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-  brandId        String?
-  brand          Brand?      @relation(fields: [brandId], references: [id])
+  brandId        String
+  brand          Brand       @relation(fields: [brandId], references: [id], onDelete: Cascade)
   name           String
   normalizedName String
-  externalCode   String?     @unique
-  cnpj           String?     @unique
-  phone          String?
-  email          String?
-  mall           String?
-  addressRaw     String
+  deliveryPlace  String
+  addressRaw     String?
   street         String?
   number         String?
   complement     String?
   district       String?
-  city           String
-  state          String
+  city           String?
+  state          String?
   postalCode     String?
-  status         String      @default("ACTIVE")
+  mall           String?
+  cnpj           String?     @unique
+  phone          String?
+  email          String?
+  status         StoreStatus @default(ACTIVE)
   prices         StorePrice[]
-  deliveredProducts StoreDeliveredProduct[]
+  vouchers       Voucher[]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
-  vouchers       Voucher[]
 
   @@index([partnerId, brandId])
-  @@unique([partnerId, brandId, normalizedName, city, mall])
+  @@unique([brandId, normalizedName, city, mall])
 }
 
 model StorePrice {
   id        String   @id @default(cuid())
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product   String
+  product   ProductType
   unitCents Int
-
-  @@unique([storeId, product])
-}
-
-model StoreDeliveredProduct {
-  id      String @id @default(cuid())
-  storeId String
-  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product String
 
   @@unique([storeId, product])
 }
