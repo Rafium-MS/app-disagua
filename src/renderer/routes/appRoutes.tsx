@@ -6,6 +6,7 @@ import {
   Building2,
   FileSpreadsheet,
   Layers,
+  GitMerge,
   LogIn,
   LogOut,
   Search,
@@ -61,6 +62,15 @@ export const routeDefinitions: RouteDefinition[] = [
     icon: Building2,
     component: lazy(() => import('../pages/Stores/StoresPage').then((module) => ({
       default: module.StoresPage,
+    }))),
+    sidebar: true,
+  },
+  {
+    path: '/stores/match',
+    label: 'Combinar lojas e parceiros',
+    icon: GitMerge,
+    component: lazy(() => import('../pages/Stores/StorePartnerMatchingPage').then((module) => ({
+      default: module.StorePartnerMatchingPage,
     }))),
     sidebar: true,
   },
