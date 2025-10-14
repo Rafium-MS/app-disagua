@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { centsToBRL } from '@shared/store-utils'
+import { useAuth } from '@/hooks/useAuth'
 
 type MonthlySummaryRow = {
   partnerId: number
@@ -53,6 +54,39 @@ type MonthlySummaryResponse = {
   }
 }
 
+const DEFAULT_ERROR_MESSAGE = 'Erro ao carregar resumo mensal'
+
+type FetchLike = (input: RequestInfo, init?: RequestInit) => Promise<Pick<Response, 'ok' | 'json'>>
+
+export async function loadMonthlySummary(
+  fetchFn: FetchLike,
+  month: string,
+  signal: AbortSignal,
+): Promise<MonthlySummaryResponse> {
+  const url = `/api/partners/monthly-summary?month=${encodeURIComponent(month)}`
+  const response = await fetchFn(url, { signal })
+
+  let payload: unknown
+  try {
+    payload = await response.json()
+  } catch (error) {
+    if (response.ok) {
+      throw new Error('Resposta inválida ao carregar resumo mensal')
+    }
+    payload = {}
+  }
+
+  if (!response.ok) {
+    const message =
+      typeof (payload as { error?: unknown })?.error === 'string'
+        ? ((payload as { error: string }).error)
+        : DEFAULT_ERROR_MESSAGE
+    throw new Error(message)
+  }
+
+  return payload as MonthlySummaryResponse
+}
+
 const numericKeys: NumericKey[] = [
   'CX COPO_qtd',
   'CX COPO_val',
@@ -78,6 +112,7 @@ type PartnersMonthlyTableProps = {
 }
 
 export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProps) {
+  const { authenticatedFetch } = useAuth()
   const [data, setData] = useState<MonthlySummaryResponse | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,22 +126,25 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
     setError(null)
     setData(null)
 
-    fetch(`/api/partners/monthly-summary?month=${month}`, { signal: controller.signal })
-      .then(async (response) => {
-        if (!response.ok) {
-          const payload = await response.json().catch(() => ({}))
-          throw new Error(payload.error ?? 'Erro ao carregar resumo mensal')
-        }
-        return response.json() as Promise<MonthlySummaryResponse>
-      })
+    loadMonthlySummary(authenticatedFetch, month, controller.signal)
       .then((payload) => {
         setData(payload)
       })
-      .catch((fetchError) => {
-        if (fetchError.name === 'AbortError') {
+      .catch((fetchError: unknown) => {
+        if (
+          typeof fetchError === 'object' &&
+          fetchError &&
+          'name' in fetchError &&
+          (fetchError as { name?: string }).name === 'AbortError'
+        ) {
           return
         }
-        setError(fetchError.message ?? 'Erro desconhecido ao carregar o resumo mensal')
+
+        const message =
+          typeof (fetchError as { message?: unknown })?.message === 'string'
+            ? ((fetchError as { message: string }).message)
+            : DEFAULT_ERROR_MESSAGE
+        setError(message)
       })
       .finally(() => {
         setIsLoading(false)
@@ -115,7 +153,7 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
     return () => {
       controller.abort()
     }
-  }, [month])
+  }, [authenticatedFetch, month])
 
   useEffect(() => {
     setStateFilter('all')
