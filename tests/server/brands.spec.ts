@@ -34,7 +34,15 @@ describe('Brands router', () => {
 
   it('lists brands with pagination and filters', async () => {
     const brands = [
-      { id: 'bra_1', partnerId: 1, name: 'Marca A', code: 'A1', createdAt: new Date(), updatedAt: new Date() },
+      {
+        id: 'bra_1',
+        partnerId: 1,
+        name: 'Marca A',
+        code: 'A1',
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        partner: { id: 1, name: 'Parceiro 1' },
+      },
     ]
     prismaMock.brand.findMany.mockResolvedValue(brands)
     prismaMock.brand.count.mockResolvedValue(1)
@@ -49,6 +57,11 @@ describe('Brands router', () => {
         where: expect.objectContaining({ partnerId: 1 }),
         skip: 10,
         take: 10,
+        include: {
+          partner: {
+            select: { id: true, name: true },
+          },
+        },
       }),
     )
     expect(response.body).toEqual(
@@ -67,6 +80,7 @@ describe('Brands router', () => {
       code: 'NV',
       createdAt: new Date(),
       updatedAt: new Date(),
+      partner: { id: 1, name: 'Parceiro 1' },
     })
 
     const response = await request(app).post('/api/brands').send({ partnerId: 1, name: 'Nova Marca', code: 'NV' })
@@ -74,6 +88,7 @@ describe('Brands router', () => {
     expect(response.status).toBe(201)
     expect(prismaMock.brand.create).toHaveBeenCalledWith({
       data: { partnerId: 1, name: 'Nova Marca', code: 'NV' },
+      include: { partner: { select: { id: true, name: true } } },
     })
   })
 
