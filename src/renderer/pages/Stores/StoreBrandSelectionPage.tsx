@@ -11,6 +11,8 @@ type PartnerOption = {
   label: string
 }
 
+const MAX_PARTNERS_PAGE_SIZE = 100
+
 export function StoreBrandSelectionPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -27,23 +29,68 @@ export function StoreBrandSelectionPage() {
     async function loadPartners() {
       setLoadingPartners(true)
       try {
-        const response = await fetch('/api/partners?page=1&pageSize=200', { signal: controller.signal })
-        if (!response.ok) {
-          throw new Error('Erro ao carregar parceiros')
+        const params = new URLSearchParams({
+          pageSize: String(MAX_PARTNERS_PAGE_SIZE),
+        })
+
+        const aggregated: PartnerOption[] = []
+        let currentPage = 1
+        let hasNextPage = true
+
+        while (hasNextPage) {
+          params.set('page', String(currentPage))
+
+          const response = await fetch(`/api/partners?${params.toString()}`, {
+            signal: controller.signal,
+          })
+
+          const payload = (await response.json().catch(() => ({}))) as {
+            data?: { id: number; name: string }[]
+            pagination?: { totalPages?: number }
+            error?: string
+          }
+
+          if (!response.ok) {
+            const message = typeof payload.error === 'string' ? payload.error : 'Erro ao carregar parceiros'
+            throw new Error(message)
+          }
+
+          if (!isMounted) {
+            return
+          }
+
+          const pagePartners: PartnerOption[] = Array.isArray(payload.data)
+            ? payload.data.map((partner) => ({
+                id: String(partner.id),
+                label: partner.name,
+              }))
+            : []
+
+          aggregated.push(...pagePartners)
+
+          const totalPages = Number(payload.pagination?.totalPages)
+          if (Number.isFinite(totalPages) && totalPages > 0) {
+            hasNextPage = currentPage < totalPages
+          } else {
+            hasNextPage = pagePartners.length === MAX_PARTNERS_PAGE_SIZE
+          }
+
+          currentPage += 1
         }
-        const payload = await response.json()
-        if (!isMounted) return
-        const items: PartnerOption[] = Array.isArray(payload.data)
-          ? payload.data.map((partner: { id: number; name: string }) => ({
-              id: String(partner.id),
-              label: partner.name,
-            }))
-          : []
-        setPartners(items)
+
+        if (!isMounted) {
+          return
+        }
+
+        setPartners(aggregated)
       } catch (error) {
-        if (!controller.signal.aborted) {
+        if (!controller.signal.aborted && isMounted) {
           console.error(error)
-          toast({ title: 'Erro ao carregar parceiros', variant: 'error' })
+          toast({
+            title: 'Erro ao carregar parceiros',
+            description: error instanceof Error ? error.message : undefined,
+            variant: 'error',
+          })
         }
       } finally {
         if (isMounted) {
