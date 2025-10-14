@@ -7,6 +7,7 @@ import { hashPassword } from '../../src/server/security/password'
 import { hashRefreshToken, serializeRefreshToken } from '../../src/server/security/tokens'
 import { signJwt } from '../../src/server/security/jwt'
 import { authConfig } from '../../src/server/config/auth'
+import { resetLoginRateLimiter } from '../../src/server/middleware/auth/rate-limit'
 
 const app = createApp()
 
@@ -20,13 +21,16 @@ function mockTransaction() {
 describe('Auth routes', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    resetLoginRateLimiter()
   })
 
   afterEach(() => {
     vi.restoreAllMocks()
+    resetLoginRateLimiter()
   })
 
   it('realiza login com credenciais válidas', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
     const passwordHash = await hashPassword('secret123')
 
     vi.spyOn(prisma.user, 'findUnique').mockResolvedValue({
@@ -56,9 +60,12 @@ describe('Auth routes', () => {
       expect.objectContaining({ data: expect.objectContaining({ action: 'LOGIN' }) }),
     )
     expect(response.headers['set-cookie']?.some((cookie) => cookie.includes('refresh_token'))).toBe(true)
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('"message":"auth.login.request"'))
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('"message":"auth.login.success"'))
   })
 
   it('incrementa tentativas inválidas ao falhar login', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const passwordHash = await hashPassword('secret123')
     vi.spyOn(prisma.user, 'findUnique').mockResolvedValue({
       id: 'user-1',
@@ -79,6 +86,33 @@ describe('Auth routes', () => {
         data: { failedLogins: { increment: 1 } },
       }),
     )
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('"message":"auth.login.invalid_credentials"'))
+  })
+
+  it('bloqueia login após exceder limite por IP', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    vi.spyOn(prisma.user, 'findUnique').mockResolvedValue(null)
+
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const response = await request(app)
+        .post('/auth/login')
+        .set('X-Forwarded-For', '127.0.0.1')
+        .send({ email: 'admin@local', password: 'wrong' })
+
+      expect(response.status).toBe(401)
+    }
+
+    const blockedResponse = await request(app)
+      .post('/auth/login')
+      .set('X-Forwarded-For', '127.0.0.1')
+      .send({ email: 'admin@local', password: 'wrong' })
+
+    expect(blockedResponse.status).toBe(429)
+    expect(blockedResponse.body.error).toBe('Muitas tentativas, tente novamente em instantes')
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('"message":"auth.login.rate_limit.blocked"'))
+    expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('"message":"auth.login.rate_limit.increment"'))
   })
 
   it('rotaciona refresh token ao atualizar sessão', async () => {

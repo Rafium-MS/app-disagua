@@ -1,4 +1,5 @@
 import type { RequestHandler } from 'express'
+import { logger } from '../../utils/logger'
 
 const WINDOW_MS = 60_000
 const LIMIT = 10
@@ -16,15 +17,26 @@ export const loginRateLimiter: RequestHandler = (req, res, next) => {
 
   if (!entry || now - entry.first > WINDOW_MS) {
     store.set(key, { count: 1, first: now })
+    logger.info('auth.login.rate_limit.reset', { ip: key })
     next()
     return
   }
 
   if (entry.count >= LIMIT) {
+    logger.warn('auth.login.rate_limit.blocked', {
+      ip: key,
+      windowStartedAt: new Date(entry.first).toISOString(),
+      attempts: entry.count,
+    })
     res.status(429).json({ error: 'Muitas tentativas, tente novamente em instantes' })
     return
   }
 
   entry.count += 1
+  logger.info('auth.login.rate_limit.increment', { ip: key, attempts: entry.count })
   next()
+}
+
+export function resetLoginRateLimiter() {
+  store.clear()
 }
