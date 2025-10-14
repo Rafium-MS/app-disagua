@@ -10,7 +10,7 @@ function getCurrentMonthIso() {
   return `${now.getFullYear()}-${month}`
 }
 
-export default function PartnersMonthlyReportPage({}: RouteComponentProps) {
+export default function PartnersMonthlyReportPage(_props: RouteComponentProps) {
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonthIso)
 
   const title = useMemo(() => {

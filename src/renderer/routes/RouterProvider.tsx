@@ -126,7 +126,7 @@ export function RouterProvider({ children }: RouterProviderProps) {
   const match = useMemo(() => findRoute(path), [path])
   const activeRoute = match?.route ?? null
 
-  const params = match?.params ?? {}
+  const params = useMemo(() => match?.params ?? {}, [match])
 
   const value = useMemo<RouterContextValue>(
     () => ({ path, query, navigate, activeRoute, params }),

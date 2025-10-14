@@ -16,6 +16,10 @@ export const storeProductLabels: Record<StoreProductType, string> = {
   VASILHAME: 'Vasilhame',
 }
 
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
 export type ParsedAddress = {
   street?: string
   number?: string
@@ -54,7 +58,7 @@ export function parseBrazilAddress(raw?: string | null): ParsedAddress {
   }
 
   const complementMatch = input.match(
-    /\b(?:ap|apt|apto|sala|loja|bloco|bl|cj|conj|cjs|sl|lt|quadra|qd)\.?\s*([\w\-\/]+)/i,
+    /\b(?:ap|apt|apto|sala|loja|bloco|bl|cj|conj|cjs|sl|lt|quadra|qd)\.?\s*([\w\-/]+)/i,
   )
   if (complementMatch) {
     output.complement = `${complementMatch[0]}`.replace(/\s+/g, ' ').trim()
@@ -90,7 +94,11 @@ export function parseBrazilAddress(raw?: string | null): ParsedAddress {
   }
 
   if (!output.state && output.city) {
-    const cityWithState = input.match(new RegExp(`${output.city}\s*-\s*([A-Z]{2})`, 'i'))
+    const cityPattern = new RegExp(
+      String.raw`${escapeRegExp(output.city)}\s*-\s*([A-Z]{2})`,
+      'i',
+    )
+    const cityWithState = input.match(cityPattern)
     if (cityWithState) {
       output.state = cityWithState[1].toUpperCase()
     }

@@ -107,15 +107,20 @@ export function MergeDialog({ open, group, loading = false, onClose, onMerge }: 
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-fg">Loja alvo</h3>
             <div className="space-y-3">
-              {group.stores.map((store) => (
-                <label
-                  key={store.id}
-                  className={`flex cursor-pointer flex-col gap-1 rounded-lg border px-3 py-2 text-sm transition ${
-                    targetId === store.id ? 'border-emerald-400 bg-emerald-500/10' : 'border-border bg-card'
-                  }`}
-                >
+              {group.stores.map((store) => {
+                const targetInputId = `merge-target-${store.id}`
+                return (
+                  <label
+                    key={store.id}
+                    htmlFor={targetInputId}
+                    aria-label={`Selecionar ${store.name ?? 'loja'}`}
+                    className={`flex cursor-pointer flex-col gap-1 rounded-lg border px-3 py-2 text-sm transition ${
+                      targetId === store.id ? 'border-emerald-400 bg-emerald-500/10' : 'border-border bg-card'
+                    }`}
+                  >
                   <div className="flex items-center gap-3">
                     <input
+                      id={targetInputId}
                       type="radio"
                       name="target"
                       value={store.id}
@@ -132,17 +137,26 @@ export function MergeDialog({ open, group, loading = false, onClose, onMerge }: 
                       </p>
                     </div>
                   </div>
-                </label>
-              ))}
+                  </label>
+                )
+              })}
             </div>
           </div>
 
           <div className="space-y-2">
             <h3 className="text-sm font-semibold text-fg">Registros a mesclar</h3>
             <div className="space-y-2">
-              {selectableSources.map((store) => (
-                <label key={store.id} className="flex items-center gap-2 text-sm text-fg">
+              {selectableSources.map((store) => {
+                const sourceInputId = `merge-source-${store.id}`
+                return (
+                  <label
+                    key={store.id}
+                    htmlFor={sourceInputId}
+                    aria-label={`Incluir ${store.name ?? 'loja'} na mesclagem`}
+                    className="flex items-center gap-2 text-sm text-fg"
+                  >
                   <input
+                    id={sourceInputId}
                     type="checkbox"
                     checked={sources.includes(store.id)}
                     onChange={() => handleToggleSource(store.id)}
@@ -151,8 +165,9 @@ export function MergeDialog({ open, group, loading = false, onClose, onMerge }: 
                   <span>
                     {store.name} — {store.city}/{store.state}
                   </span>
-                </label>
-              ))}
+                  </label>
+                )
+              })}
               {selectableSources.length === 0 && (
                 <p className="text-xs text-fg/50">Selecione outra loja como alvo para mesclar os registros restantes.</p>
               )}

@@ -57,10 +57,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => media.removeEventListener('change', handler)
   }, [theme])
 
-  useEffect(() => {
-    applyTheme(theme)
-  }, [])
-
   const value = useMemo(() => ({ theme, setTheme }), [theme])
 
   return <ThemeCtx.Provider value={value}>{children}</ThemeCtx.Provider>

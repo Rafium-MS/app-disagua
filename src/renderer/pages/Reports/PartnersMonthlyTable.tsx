@@ -71,7 +71,7 @@ export async function loadMonthlySummary(
   let payload: unknown
   try {
     payload = await response.json()
-  } catch (error) {
+  } catch (_error) {
     if (response.ok) {
       throw new Error('Resposta inválida ao carregar resumo mensal')
     }
