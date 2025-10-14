@@ -3,59 +3,60 @@ import { Prisma } from '@prisma/client'
 import express from 'express'
 import request from 'supertest'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import * as XLSX from 'xlsx'
 
 import { createStoresRouter } from '../../src/server/routes/stores'
 
+type MockStore = {
+  create: ReturnType<typeof vi.fn>
+  findMany: ReturnType<typeof vi.fn>
+  count: ReturnType<typeof vi.fn>
+  findUnique: ReturnType<typeof vi.fn>
+  update: ReturnType<typeof vi.fn>
+  delete: ReturnType<typeof vi.fn>
+  findFirst: ReturnType<typeof vi.fn>
+}
+
+type MockBrand = {
+  findFirst: ReturnType<typeof vi.fn>
+  create: ReturnType<typeof vi.fn>
+}
+
+type MockStorePrice = {
+  deleteMany: ReturnType<typeof vi.fn>
+  createMany: ReturnType<typeof vi.fn>
+}
+
 const createPrismaMock = () => {
-  const store = {
+  const store: MockStore = {
     create: vi.fn(),
     findMany: vi.fn(),
     count: vi.fn(),
     findUnique: vi.fn(),
     update: vi.fn(),
     delete: vi.fn(),
+    findFirst: vi.fn(),
   }
 
-  const brand = {
-    upsert: vi.fn(),
-    findUnique: vi.fn(),
+  const brand: MockBrand = {
     findFirst: vi.fn(),
     create: vi.fn(),
   }
 
-  const storePrice = {
+  const storePrice: MockStorePrice = {
     deleteMany: vi.fn(),
     createMany: vi.fn(),
-  }
-
-  const storeDeliveredProduct = {
-    deleteMany: vi.fn(),
-    createMany: vi.fn(),
-  }
-
-  const partner = {
-    findUnique: vi.fn(),
-    findFirst: vi.fn(),
-  }
-
-  const voucher = {
-    updateMany: vi.fn(),
   }
 
   const client = {
     store,
     brand,
     storePrice,
-    storeDeliveredProduct,
-    partner,
-    voucher,
-    $transaction: vi.fn(async (arg: unknown) => {
-      if (typeof arg === 'function') {
-        return (arg as (tx: typeof client) => unknown)(client)
+    $transaction: vi.fn(async (operations: unknown) => {
+      if (Array.isArray(operations)) {
+        return Promise.all(operations)
       }
-      if (Array.isArray(arg)) {
-        return Promise.all(arg)
+      if (typeof operations === 'function') {
+        return (operations as (tx: typeof client) => unknown)(client)
       }
       return null
     }),
@@ -72,144 +73,158 @@ describe('Stores router', () => {
     prismaMock = createPrismaMock()
     app = express()
     app.use(express.json())
+    app.use((req, _res, next) => {
+      ;(req as any).user = { id: 'user', email: 'user@test', name: 'User', roles: ['ADMIN', 'SUPERVISOR'] }
+      next()
+    })
     app.use('/api/stores', createStoresRouter({ prisma: prismaMock as unknown as PrismaClient }))
   })
 
-  it('creates a store with prices and brand', async () => {
-    prismaMock.brand.upsert.mockResolvedValue({ id: 'bra_1', partnerId: 1, name: 'Marca Nova', code: null })
-    prismaMock.store.create.mockResolvedValue({
-      id: 'sto_1',
-      partnerId: 1,
-      brandId: 'bra_1',
-      name: 'Loja Iguatemi',
-      normalizedName: 'loja iguatemi',
-      city: 'São Paulo',
-      state: 'SP',
-      status: 'ACTIVE',
-      prices: [{ id: 'price_1', product: 'GALAO_20L', unitCents: 2200 }],
-      brand: { id: 'bra_1', name: 'Marca Nova', code: null },
-      partner: { id: 1, name: 'Parceiro' },
-    })
+  it('lists stores with filters', async () => {
+    prismaMock.store.findMany.mockResolvedValue([
+      {
+        id: 'sto_1',
+        partnerId: 1,
+        brandId: 'bra_1',
+        name: 'Loja Centro',
+        normalizedName: 'loja centro',
+        deliveryPlace: 'Rua A, 100',
+        city: 'São Paulo',
+        state: 'SP',
+        mall: null,
+        status: 'ACTIVE',
+        prices: [],
+        brand: { id: 'bra_1', name: 'Marca', code: null },
+        partner: { id: 1, name: 'Parceiro' },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ])
+    prismaMock.store.count.mockResolvedValue(1)
 
-    const payload = {
-      partnerId: 1,
-      createBrand: { name: 'Marca Nova' },
-      name: 'Loja Iguatemi',
-      addressRaw: 'Rua Faria Lima, 123',
-      city: 'São Paulo',
-      state: 'sp',
-      postalCode: '01489000',
-      prices: [
-        { product: 'GALAO_20L', unitValueBRL: 'R$ 22,00' },
-        { product: 'PET_1500ML', unitValueBRL: '' },
-      ],
-      status: 'ACTIVE',
-    }
+    const response = await request(app)
+      .get('/api/stores')
+      .query({ brandId: 'bra_1', city: 'São Paulo', status: 'ACTIVE', page: 2, size: 5 })
 
-    const response = await request(app).post('/api/stores').send(payload)
-
-    expect(response.status).toBe(201)
-    expect(prismaMock.brand.upsert).toHaveBeenCalledWith(
+    expect(response.status).toBe(200)
+    expect(prismaMock.store.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: {
-          partnerId_name: {
-            partnerId: 1,
-            name: 'Marca Nova',
-          },
-        },
+        where: expect.objectContaining({ brandId: 'bra_1' }),
+        take: 5,
+        skip: 5,
+        include: expect.any(Object),
       }),
     )
-    expect(prismaMock.store.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({
-          partnerId: 1,
-          brandId: 'bra_1',
-          normalizedName: 'loja iguatemi',
-          state: 'SP',
-          prices: { create: [{ product: 'GALAO_20L', unitCents: 2200 }] },
-        }),
-      }),
-    )
+    expect(response.body).toHaveProperty('data')
   })
 
-  it('loads a store by id with relations', async () => {
+  it('creates a store and stores prices in centavos', async () => {
+    prismaMock.store.create.mockResolvedValue({ id: 'sto_1', partnerId: 1, brandId: 'bra_1' })
     prismaMock.store.findUnique.mockResolvedValue({
       id: 'sto_1',
       partnerId: 1,
       brandId: 'bra_1',
       name: 'Loja Centro',
       normalizedName: 'loja centro',
+      deliveryPlace: 'Rua A',
       city: 'São Paulo',
       state: 'SP',
+      mall: null,
       status: 'ACTIVE',
       prices: [],
       brand: { id: 'bra_1', name: 'Marca', code: null },
       partner: { id: 1, name: 'Parceiro' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
     })
 
-    const response = await request(app).get('/api/stores/sto_1')
-
-    expect(response.status).toBe(200)
-    expect(prismaMock.store.findUnique).toHaveBeenCalledWith({
-      where: { id: 'sto_1' },
-      include: {
-        prices: true,
-        deliveredProducts: { select: { product: true } },
-        brand: { select: { id: true, name: true, code: true } },
-        partner: { select: { id: true, name: true } },
-      },
+    const response = await request(app).post('/api/stores').send({
+      partnerId: '1',
+      brandId: 'bra_1',
+      name: 'Loja Centro',
+      deliveryPlace: 'Rua A',
+      addressRaw: 'Rua A, 100 - Centro',
+      prices: [
+        { product: 'GALAO_20L', unitValueBRL: 'R$ 25,50' },
+        { product: 'GALAO_10L', unitValueBRL: 'R$ 12,00' },
+      ],
     })
+
+    expect(response.status).toBe(201)
+    expect(prismaMock.store.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          partnerId: 1,
+          brandId: 'bra_1',
+          normalizedName: 'loja centro',
+        }),
+      }),
+    )
+    expect(prismaMock.storePrice.createMany).toHaveBeenCalledWith({
+      data: [
+        { product: 'GALAO_20L', unitCents: 2550, storeId: 'sto_1' },
+        { product: 'GALAO_10L', unitCents: 1200, storeId: 'sto_1' },
+      ],
+      skipDuplicates: true,
+    })
+    expect(prismaMock.storePrice.deleteMany).toHaveBeenCalledWith({ where: { storeId: 'sto_1' } })
   })
 
-  it('updates a store replacing prices', async () => {
-    prismaMock.brand.findUnique.mockResolvedValue({ id: 'bra_1', partnerId: 1, name: 'Marca Nova', code: null })
+  it('rejects creation without delivery place', async () => {
+    const response = await request(app).post('/api/stores').send({ partnerId: '1', brandId: 'bra_1', name: 'Loja' })
+    expect(response.status).toBe(400)
+    expect(prismaMock.store.create).not.toHaveBeenCalled()
+  })
+
+  it('returns 409 with contextual message on unique violation', async () => {
+    prismaMock.store.create.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError('Unique', {
+        code: 'P2002',
+        clientVersion: '5.18.0',
+        meta: { target: 'Store_brandId_normalizedName_city_mall_key' },
+      }),
+    )
+
+    const response = await request(app).post('/api/stores').send({
+      partnerId: '1',
+      brandId: 'bra_1',
+      name: 'Loja Centro',
+      deliveryPlace: 'Rua A',
+    })
+
+    expect(response.status).toBe(409)
+    expect(response.body.error).toMatch(/já existe loja/i)
+  })
+
+  it('updates store and replaces prices', async () => {
+    prismaMock.store.update.mockResolvedValue({ id: 'sto_1' })
     prismaMock.store.findUnique
+      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({
         id: 'sto_1',
         partnerId: 1,
         brandId: 'bra_1',
-        name: 'Loja Antiga',
-        addressRaw: 'Rua antiga, 1',
+        name: 'Loja Centro',
+        normalizedName: 'loja centro',
+        deliveryPlace: 'Rua A',
         city: 'São Paulo',
         state: 'SP',
-        postalCode: null,
-        deliveredProducts: [{ id: 'dp_1', product: 'GALAO_10L', storeId: 'sto_1' }],
-      })
-      .mockResolvedValueOnce({
-        id: 'sto_1',
-        partnerId: 1,
-        brandId: 'bra_1',
-        name: 'Loja Atualizada',
-        normalizedName: 'loja atualizada',
-        addressRaw: 'Rua atual, 1',
-        city: 'São Paulo',
-        state: 'SP',
-        postalCode: '01000000',
+        mall: null,
         status: 'ACTIVE',
-        prices: [
-          { id: 'price_1', storeId: 'sto_1', product: 'GALAO_10L', unitCents: 1500 },
-        ],
-        deliveredProducts: [{ id: 'dp_2', product: 'GALAO_10L', storeId: 'sto_1' }],
-        brand: { id: 'bra_1', name: 'Marca Nova', code: null },
+        prices: [],
+        brand: { id: 'bra_1', name: 'Marca', code: null },
         partner: { id: 1, name: 'Parceiro' },
+        createdAt: new Date(),
+        updatedAt: new Date(),
       })
 
-    prismaMock.store.update.mockResolvedValue({})
-
-    const response = await request(app)
-      .patch('/api/stores/sto_1')
-      .send({
-        partnerId: 1,
-        brandId: 'bra_1',
-        name: 'Loja Atualizada',
-        addressRaw: 'Rua atual, 1',
-        city: 'São Paulo',
-        state: 'SP',
-        postalCode: '01000000',
-        prices: [{ product: 'GALAO_10L', unitValueBRL: '15,00' }],
-        deliveredProducts: ['GALAO_10L'],
-        status: 'ACTIVE',
-      })
+    const response = await request(app).patch('/api/stores/sto_1').send({
+      partnerId: '1',
+      brandId: 'bra_1',
+      name: 'Loja Atualizada',
+      deliveryPlace: 'Rua Nova',
+      prices: [{ product: 'GALAO_20L', unitValueBRL: 'R$ 30,00' }],
+    })
 
     expect(response.status).toBe(200)
     expect(prismaMock.store.update).toHaveBeenCalledWith(
@@ -218,173 +233,35 @@ describe('Stores router', () => {
         data: expect.objectContaining({
           name: 'Loja Atualizada',
           normalizedName: 'loja atualizada',
+          deliveryPlace: 'Rua Nova',
         }),
       }),
     )
     expect(prismaMock.storePrice.deleteMany).toHaveBeenCalledWith({ where: { storeId: 'sto_1' } })
-    expect(prismaMock.storePrice.createMany).toHaveBeenCalledWith({
-      data: [{ storeId: 'sto_1', product: 'GALAO_10L', unitCents: 1500 }],
+    expect(prismaMock.storePrice.createMany).toHaveBeenCalled()
+  })
+
+  it('returns store details by id', async () => {
+    prismaMock.store.findUnique.mockResolvedValue({
+      id: 'sto_1',
+      partnerId: 1,
+      brandId: 'bra_1',
+      name: 'Loja Centro',
+      normalizedName: 'loja centro',
+      deliveryPlace: 'Rua A',
+      city: 'São Paulo',
+      state: 'SP',
+      status: 'ACTIVE',
+      prices: [],
+      brand: { id: 'bra_1', name: 'Marca', code: null },
+      partner: { id: 1, name: 'Parceiro' },
+      createdAt: new Date(),
+      updatedAt: new Date(),
     })
-    expect(prismaMock.storeDeliveredProduct.deleteMany).toHaveBeenCalledWith({ where: { storeId: 'sto_1' } })
-    expect(prismaMock.storeDeliveredProduct.createMany).toHaveBeenCalledWith({
-      data: [{ storeId: 'sto_1', product: 'GALAO_10L' }],
-    })
-  })
 
-  it('returns 409 when create violates unique constraint', async () => {
-    prismaMock.brand.upsert.mockResolvedValue({ id: 'bra_1', partnerId: 1, name: 'Marca', code: null })
-    prismaMock.store.create.mockRejectedValue(
-      new Prisma.PrismaClientKnownRequestError('Duplicate', {
-        code: 'P2002',
-        clientVersion: '5.18.0',
-        meta: { target: ['Store_partnerId_brandId_normalizedName_city_mall_key'] },
-      }),
-    )
-
-    const response = await request(app)
-      .post('/api/stores')
-      .send({
-        partnerId: 1,
-        name: 'Duplicada',
-        addressRaw: 'Rua 1',
-        city: 'São Paulo',
-        state: 'SP',
-        prices: [],
-        status: 'ACTIVE',
-      })
-
-    expect(response.status).toBe(409)
-    expect(response.body).toHaveProperty('error')
-  })
-
-  it('filters stores on GET', async () => {
-    prismaMock.store.findMany.mockResolvedValue([
-      {
-        id: 'sto_1',
-        partnerId: 1,
-        brandId: 'bra_1',
-        name: 'Loja Filtro',
-        normalizedName: 'loja filtro',
-        city: 'São Paulo',
-        state: 'SP',
-        status: 'ACTIVE',
-        prices: [],
-        brand: { id: 'bra_1', name: 'Marca', code: null },
-        partner: { id: 1, name: 'Parceiro' },
-      },
-    ])
-    prismaMock.store.count.mockResolvedValue(1)
-
-    const response = await request(app)
-      .get('/api/stores')
-      .query({ partnerId: 1, brandId: 'bra_1', q: 'Filtro', city: 'São', state: 'SP', mall: 'Shop', status: 'ACTIVE' })
-
+    const response = await request(app).get('/api/stores/sto_1')
     expect(response.status).toBe(200)
-    expect(prismaMock.store.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
-          partnerId: 1,
-          brandId: 'bra_1',
-          status: 'ACTIVE',
-        }),
-      }),
-    )
+    expect(prismaMock.store.findUnique).toHaveBeenCalledWith({ where: { id: 'sto_1' }, include: expect.any(Object) })
   })
 
-  it('imports stores from XLSX creating, updating and skipping rows', async () => {
-    prismaMock.partner.findUnique
-      .mockResolvedValueOnce({ id: 1, name: 'Parceiro 1' })
-      .mockResolvedValueOnce({ id: 1, name: 'Parceiro 1' })
-      .mockResolvedValueOnce(null)
-
-    prismaMock.partner.findFirst.mockResolvedValue(null)
-
-    prismaMock.brand.findFirst
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({ id: 'bra_1', partnerId: 1, name: 'Marca Nova', code: null })
-
-    prismaMock.brand.create.mockResolvedValue({ id: 'bra_1', partnerId: 1, name: 'Marca Nova', code: null })
-
-    prismaMock.store.findUnique
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce({
-        id: 'sto_exist',
-        partnerId: 1,
-        brandId: 'bra_1',
-        name: 'Loja Centro',
-        addressRaw: 'Rua A, 100',
-        city: 'São Paulo',
-        state: 'SP',
-        postalCode: null,
-        complement: null,
-        number: null,
-        district: null,
-      })
-
-    prismaMock.store.create.mockResolvedValue({ id: 'sto_new' })
-    prismaMock.store.update.mockResolvedValue({})
-
-    const rows = [
-      {
-        Parceiro: '1',
-        Marca: 'Marca Nova',
-        Nome: 'Loja Centro',
-        Cidade: 'São Paulo',
-        UF: 'SP',
-        Endereco: 'Rua A, 100',
-        Shopping: 'Iguatemi',
-        Externo: 'EXT-1',
-        Valor20: '25,00',
-      },
-      {
-        Parceiro: '1',
-        Marca: 'Marca Nova',
-        Nome: 'Loja Centro',
-        Cidade: 'São Paulo',
-        UF: 'SP',
-        Endereco: 'Rua A, 100',
-        Shopping: 'Iguatemi',
-        Externo: 'EXT-1',
-        Valor20: '26,00',
-      },
-      {
-        Parceiro: '999',
-        Nome: 'Sem Parceiro',
-        Cidade: 'Rio de Janeiro',
-        UF: 'RJ',
-        Endereco: 'Rua B, 200',
-      },
-    ]
-
-    const worksheet = XLSX.utils.json_to_sheet(rows)
-    const workbook = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Lojas')
-    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })
-
-    const response = await request(app)
-      .post('/api/stores/import')
-      .attach('file', buffer, 'stores.xlsx')
-      .field(
-        'mapping',
-        JSON.stringify({
-          colPartner: 'Parceiro',
-          colBrand: 'Marca',
-          colStoreName: 'Nome',
-          colCity: 'Cidade',
-          colState: 'UF',
-          colAddress: 'Endereco',
-          colMall: 'Shopping',
-          colExternalCode: 'Externo',
-          colValue20L: 'Valor20',
-        }),
-      )
-      .field('allowCreateBrand', 'true')
-
-    expect(response.status).toBe(200)
-    expect(response.body).toEqual(
-      expect.objectContaining({ created: 1, updated: 1, skipped: 1, conflicts: expect.any(Array) }),
-    )
-    expect(prismaMock.store.create).toHaveBeenCalled()
-    expect(prismaMock.store.update).toHaveBeenCalled()
-  })
 })

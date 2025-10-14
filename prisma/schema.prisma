@@ -140,32 +140,31 @@ model Store {
   id             String      @id @default(cuid())
   partnerId      Int
   partner        Partner     @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-  brandId        String?
-  brand          Brand?      @relation(fields: [brandId], references: [id])
+  brandId        String
+  brand          Brand       @relation(fields: [brandId], references: [id], onDelete: Cascade)
   name           String
   normalizedName String
-  externalCode   String?     @unique
-  cnpj           String?     @unique
-  phone          String?
-  email          String?
-  mall           String?
-  addressRaw     String
+  deliveryPlace  String
+  addressRaw     String?
   street         String?
   number         String?
   complement     String?
   district       String?
-  city           String
-  state          String
+  city           String?
+  state          String?
   postalCode     String?
+  mall           String?
+  cnpj           String?     @unique
+  phone          String?
+  email          String?
   status         String      @default("ACTIVE")
   prices         StorePrice[]
-  deliveredProducts StoreDeliveredProduct[]
+  vouchers       Voucher[]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
-  vouchers       Voucher[]
 
   @@index([partnerId, brandId])
-  @@unique([partnerId, brandId, normalizedName, city, mall])
+  @@unique([brandId, normalizedName, city, mall])
 }
 
 model StorePrice {
@@ -174,15 +173,6 @@ model StorePrice {
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   product   String
   unitCents Int
-
-  @@unique([storeId, product])
-}
-
-model StoreDeliveredProduct {
-  id      String @id @default(cuid())
-  storeId String
-  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product String
 
   @@unique([storeId, product])
 }

@@ -6,10 +6,8 @@ import {
   Building2,
   FileSpreadsheet,
   Layers,
-  GitMerge,
   LogIn,
   LogOut,
-  Search,
   Upload,
   Users,
   Users2,
@@ -57,34 +55,25 @@ export const routeDefinitions: RouteDefinition[] = [
     sidebar: true,
   },
   {
-    path: '/stores',
+    path: '/brands',
+    label: 'Marcas',
+    icon: Building2,
+    component: lazy(() => import('../pages/Brands/BrandsPage').then((module) => ({
+      default: module.BrandsPage,
+    }))),
+    sidebar: true,
+  },
+  {
+    path: '/brands/:brandId/stores',
     label: 'Lojas',
     icon: Building2,
     component: lazy(() => import('../pages/Stores/StoresPage').then((module) => ({
       default: module.StoresPage,
     }))),
-    sidebar: true,
-  },
-  {
-    path: '/stores/match',
-    label: 'Combinar lojas e parceiros',
-    icon: GitMerge,
-    component: lazy(() => import('../pages/Stores/StorePartnerMatchingPage').then((module) => ({
-      default: module.StorePartnerMatchingPage,
-    }))),
-    sidebar: true,
   },
   {
     path: '/stores/new',
     label: 'Nova loja',
-    icon: Building2,
-    component: lazy(() => import('../pages/Stores/StoreBrandSelectionPage').then((module) => ({
-      default: module.StoreBrandSelectionPage,
-    }))),
-  },
-  {
-    path: '/stores/new/form',
-    label: 'Cadastro da loja',
     icon: Building2,
     component: lazy(() => import('../pages/Stores/StoreFormPage').then((module) => ({
       default: module.StoreFormPage,
@@ -104,14 +93,6 @@ export const routeDefinitions: RouteDefinition[] = [
     icon: Upload,
     component: lazy(() => import('../pages/Stores/StoreImportPage').then((module) => ({
       default: module.StoreImportPage,
-    }))),
-  },
-  {
-    path: '/stores/duplicates',
-    label: 'Duplicidades de lojas',
-    icon: Search,
-    component: lazy(() => import('../pages/Stores/StoreDuplicatesPage').then((module) => ({
-      default: module.StoreDuplicatesPage,
     }))),
   },
   {
