@@ -15,6 +15,7 @@ import { loginRateLimiter } from '../middleware/auth/rate-limit'
 import { requireAuth } from '../middleware/auth/require-auth'
 import { requireRole } from '../middleware/auth/require-role'
 import { recordAuditLog } from '../utils/audit'
+import { logger } from '../utils/logger'
 import { setRequestActor } from '../context'
 import type { UserRoleName } from '../../shared/auth'
 
@@ -85,8 +86,17 @@ function clearAuthCookies(res: Response) {
 export const authRouter = Router()
 
 authRouter.post('/login', loginRateLimiter, async (req, res) => {
+  logger.info('auth.login.request', {
+    ip: req.ip ?? null,
+    email: typeof req.body?.email === 'string' ? req.body.email : undefined,
+  })
+
   const parseResult = loginSchema.safeParse(req.body)
   if (!parseResult.success) {
+    logger.warn('auth.login.validation_failed', {
+      ip: req.ip ?? null,
+      issues: parseResult.error.issues.map((issue) => ({ path: issue.path, message: issue.message })),
+    })
     res.status(400).json({ error: 'Dados inválidos', details: parseResult.error.flatten().fieldErrors })
     return
   }
@@ -105,6 +115,12 @@ authRouter.post('/login', loginRateLimiter, async (req, res) => {
         data: { failedLogins: { increment: 1 } },
       })
     }
+    logger.warn('auth.login.invalid_credentials', {
+      ip: req.ip ?? null,
+      email,
+      userId: user?.id ?? null,
+      reason: user ? 'INACTIVE' : 'NOT_FOUND',
+    })
     res.status(401).json({ error: 'Credenciais inválidas' })
     return
   }
@@ -114,6 +130,12 @@ authRouter.post('/login', loginRateLimiter, async (req, res) => {
     await prisma.user.update({
       where: { id: user.id },
       data: { failedLogins: { increment: 1 } },
+    })
+    logger.warn('auth.login.invalid_credentials', {
+      ip: req.ip ?? null,
+      email,
+      userId: user.id,
+      reason: 'INVALID_PASSWORD',
     })
     res.status(401).json({ error: 'Credenciais inválidas' })
     return
@@ -158,6 +180,12 @@ authRouter.post('/login', loginRateLimiter, async (req, res) => {
   setRequestActor(user.id)
   const refreshToken = serializeRefreshToken(refreshRecord.id, refreshValue)
   setAuthCookies(res, jwt.token, refreshToken, refreshExpires)
+
+  logger.info('auth.login.success', {
+    ip: req.ip ?? null,
+    userId: user.id,
+    email: user.email,
+  })
 
   await recordAuditLog({ action: 'LOGIN', entity: 'User', entityId: user.id })
 
