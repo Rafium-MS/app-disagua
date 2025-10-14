@@ -45,6 +45,14 @@ const createBrandsRouter = ({ prisma }: { prisma: PrismaClient }) => {
           orderBy: { name: 'asc' },
           skip,
           take: pageSize,
+          include: {
+            partner: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
         }),
         prisma.brand.count({ where }),
       ])
@@ -76,7 +84,17 @@ const createBrandsRouter = ({ prisma }: { prisma: PrismaClient }) => {
     try {
       const payload = brandSchema.parse(req.body)
 
-      const created = await prisma.brand.create({ data: payload })
+      const created = await prisma.brand.create({
+        data: payload,
+        include: {
+          partner: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
+      })
 
       res.status(201).json(created)
     } catch (error) {
