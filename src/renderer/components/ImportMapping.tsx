@@ -1,47 +1,49 @@
 const requiredMappings = [
   { key: 'colPartner', label: 'Parceiro *' },
+  { key: 'colBrand', label: 'Marca *' },
   { key: 'colStoreName', label: 'Nome da loja *' },
-  { key: 'colCity', label: 'Cidade *' },
-  { key: 'colState', label: 'UF *' },
+  { key: 'colDeliveryPlace', label: 'Local de entrega *' },
 ]
 
 const optionalMappings = [
-  { key: 'colBrand', label: 'Marca' },
+  { key: 'colAddressRaw', label: 'Endereço completo' },
+  { key: 'colCity', label: 'Cidade' },
+  { key: 'colState', label: 'UF' },
   { key: 'colMall', label: 'Shopping' },
-  { key: 'colAddress', label: 'Endereço completo' },
-  { key: 'colExternalCode', label: 'Código externo' },
   { key: 'colCNPJ', label: 'CNPJ' },
   { key: 'colPhone', label: 'Telefone' },
   { key: 'colEmail', label: 'Email' },
-  { key: 'colValue20L', label: 'Preço Galão 20L' },
-  { key: 'colValue10L', label: 'Preço Galão 10L' },
-  { key: 'colValue1500', label: 'Preço PET 1500ml' },
-  { key: 'colValueCopo', label: 'Preço Caixa Copo' },
-  { key: 'colValueVasilhame', label: 'Preço Vasilhame' },
+  { key: 'colPrice20L', label: 'Preço Galão 20L' },
+  { key: 'colPrice10L', label: 'Preço Galão 10L' },
+  { key: 'colPrice1500', label: 'Preço PET 1500ml' },
+  { key: 'colPriceCopo', label: 'Preço Caixa Copo' },
+  { key: 'colPriceVasilhame', label: 'Preço Vasilhame' },
 ]
 
 type MappingKey =
   | 'colPartner'
+  | 'colBrand'
   | 'colStoreName'
+  | 'colDeliveryPlace'
+  | 'colAddressRaw'
   | 'colCity'
   | 'colState'
-  | 'colBrand'
   | 'colMall'
-  | 'colAddress'
-  | 'colExternalCode'
   | 'colCNPJ'
   | 'colPhone'
   | 'colEmail'
-  | 'colValue20L'
-  | 'colValue10L'
-  | 'colValue1500'
-  | 'colValueCopo'
-  | 'colValueVasilhame'
+  | 'colPrice20L'
+  | 'colPrice10L'
+  | 'colPrice1500'
+  | 'colPriceCopo'
+  | 'colPriceVasilhame'
+
+export type ImportMappingValue = Partial<Record<MappingKey, string | null | undefined>>
 
 type ImportMappingProps = {
   columns: string[]
-  value: Partial<Record<MappingKey, string | null | undefined>>
-  onChange: (value: Partial<Record<MappingKey, string | null | undefined>>) => void
+  value: ImportMappingValue
+  onChange: (value: ImportMappingValue) => void
 }
 
 export function ImportMapping({ columns, value, onChange }: ImportMappingProps) {

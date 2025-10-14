@@ -3,7 +3,7 @@ import path from 'node:path'
 import { PrismaClient } from '@prisma/client'
 import xlsx from 'xlsx'
 
-import { brlToCents, parseBrazilAddress } from '../src/shared/store-utils'
+import { brlToCents, parseBrazilAddress, normalizeName } from '../src/shared/store-utils'
 import type { StoreProductType } from '../src/shared/store-utils'
 
 const prisma = new PrismaClient()
@@ -17,13 +17,22 @@ async function main() {
     raw: false,
   })
 
+  const partnerId = Number(process.env.PARTNER_ID ?? 1)
+  if (!Number.isInteger(partnerId)) {
+    throw new Error('Informe PARTNER_ID como inteiro para importar as lojas')
+  }
+
+  const partner = await prisma.partner.findUnique({ where: { id: partnerId } })
+  if (!partner) {
+    throw new Error(`Parceiro ${partnerId} não encontrado`)
+  }
+
   for (const row of rows) {
-    const marca = String(row['MARCA'] ?? '').trim()
+    const brandName = String(row['MARCA'] ?? '').trim()
     const loja = String(row['LOJA'] ?? '').trim()
-    const codigo = String(row['COD da Disagua'] ?? '').trim()
     const endereco = String(row['LOCAL DA ENTREGA'] ?? '').trim()
-    const municipio = String(row['MUNICIPIO'] ?? '').trim()
-    const uf = String(row['UF'] ?? '').trim().slice(0, 2).toUpperCase()
+    const municipio = String(row['MUNICIPIO'] ?? '').trim() || undefined
+    const uf = String(row['UF'] ?? '').trim().slice(0, 2).toUpperCase() || undefined
     const valorUn = row['VALOR UN.']
     const p20 = row['VALOR 20L'] ?? row['20L'] ?? null
     const p10 = row['VALOR 10L'] ?? row['10L'] ?? null
@@ -31,45 +40,60 @@ async function main() {
     const pCopo = row['VALOR COPO'] ?? row['CAIXA DE COPO'] ?? null
     const pVasilhame = row['VALOR VASILHAME'] ?? null
 
-    if (!loja || !endereco || !municipio || !uf) {
-      console.warn(`Pulando linha inválida: ${JSON.stringify({ marca, loja, endereco, municipio, uf })}`)
+    if (!loja || !endereco || !brandName) {
+      console.warn(`Pulando linha inválida: ${JSON.stringify({ brandName, loja, endereco })}`)
       continue
     }
 
-    const partner = marca ? await prisma.partner.findFirst({ where: { name: marca } }) : null
-    const parsed = parseBrazilAddress(endereco)
-    const externalCode = codigo || `${marca}:${loja}`
-
-    const store = await prisma.store.upsert({
-      where: { externalCode },
-      update: {
-        name: loja,
-        partnerId: partner?.id ?? null,
-        addressRaw: endereco,
-        street: parsed.street ?? null,
-        number: parsed.number ?? null,
-        complement: parsed.complement ?? null,
-        district: parsed.district ?? null,
-        city: municipio,
-        state: uf,
-        postalCode: parsed.postalCode ?? null,
-        status: 'ACTIVE',
+    const brand = await prisma.brand.upsert({
+      where: {
+        partnerId_name: {
+          partnerId,
+          name: brandName,
+        },
       },
+      update: {},
       create: {
-        externalCode,
-        name: loja,
-        partnerId: partner?.id ?? null,
-        addressRaw: endereco,
-        street: parsed.street ?? null,
-        number: parsed.number ?? null,
-        complement: parsed.complement ?? null,
-        district: parsed.district ?? null,
-        city: municipio,
-        state: uf,
-        postalCode: parsed.postalCode ?? null,
-        status: 'ACTIVE',
+        partnerId,
+        name: brandName,
       },
     })
+
+    const parsed = parseBrazilAddress(endereco)
+    const normalizedName = normalizeName(loja)
+
+    const store = await prisma.store.findFirst({
+      where: {
+        brandId: brand.id,
+        normalizedName,
+        city: municipio ?? null,
+        mall: null,
+      },
+    })
+
+    const baseData = {
+      partnerId,
+      brandId: brand.id,
+      name: loja,
+      normalizedName,
+      deliveryPlace: endereco,
+      addressRaw: endereco,
+      street: parsed.street ?? null,
+      number: parsed.number ?? null,
+      complement: parsed.complement ?? null,
+      district: parsed.district ?? null,
+      city: municipio ?? parsed.city ?? null,
+      state: uf ?? parsed.state ?? null,
+      postalCode: parsed.postalCode ?? null,
+      status: 'ACTIVE' as const,
+    }
+
+    const persisted = store
+      ? await prisma.store.update({
+          where: { id: store.id },
+          data: baseData,
+        })
+      : await prisma.store.create({ data: baseData })
 
     const pricePairs: Array<{ product: StoreProductType; unitCents: number }> = []
 
@@ -90,15 +114,15 @@ async function main() {
       pushPrice('GALAO_20L', valorUn)
     }
 
-    await prisma.storePrice.deleteMany({ where: { storeId: store.id } })
+    await prisma.storePrice.deleteMany({ where: { storeId: persisted.id } })
 
     if (pricePairs.length > 0) {
       await prisma.storePrice.createMany({
-        data: pricePairs.map((pair) => ({ storeId: store.id, ...pair })),
+        data: pricePairs.map((pair) => ({ storeId: persisted.id, ...pair })),
       })
     }
 
-    console.log(`Loja sincronizada: ${loja} (${externalCode})`)
+    console.log(`Loja sincronizada: ${loja}`)
   }
 }
 
