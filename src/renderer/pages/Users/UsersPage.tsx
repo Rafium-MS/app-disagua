@@ -98,6 +98,66 @@ export function UsersPage() {
     void loadUsers(1)
   }, [hasRole, loadUsers])
 
+  const handleCreateUser = () => {
+    setFormState({ open: true, mode: 'create' })
+  }
+
+  const handleToggleStatus = useCallback(
+    async (user: UserListItem) => {
+      const nextStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+      const response = await authenticatedFetch(`/api/users/${user.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: nextStatus }),
+      })
+      if (!response.ok) {
+        toast({ title: 'Não foi possível atualizar o status', variant: 'error' })
+        return
+      }
+      toast({ title: `Usuário ${nextStatus === 'ACTIVE' ? 'ativado' : 'desativado'}`, variant: 'success' })
+      await loadUsers(pagination.page)
+    },
+    [authenticatedFetch, loadUsers, pagination.page, toast],
+  )
+
+  const handleResetPassword = useCallback(
+    async (user: UserListItem) => {
+      const response = await authenticatedFetch('/auth/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id }),
+      })
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      toast({ title: data.error ?? 'Não foi possível resetar a senha', variant: 'error' })
+      return
+      }
+      const data = (await response.json()) as { temporaryPassword: string }
+      setResetState({ open: true, user, temporaryPassword: data.temporaryPassword })
+      toast({ title: 'Senha temporária gerada', variant: 'success' })
+    },
+    [authenticatedFetch, setResetState, toast],
+  )
+
+  const handleRolesSubmit = useCallback(
+    async (userId: string, roles: UserRoleName[]) => {
+      const response = await authenticatedFetch(`/api/users/${userId}/roles`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roles }),
+      })
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      toast({ title: data.error ?? 'Não foi possível atualizar as funções', variant: 'error' })
+      return
+      }
+      toast({ title: 'Funções atualizadas', variant: 'success' })
+      setRolesState({ open: false })
+      await loadUsers(pagination.page)
+    },
+    [authenticatedFetch, loadUsers, pagination.page, setRolesState, toast],
+  )
+
   const columns = useMemo<ColumnConfig<UserListItem>[]>(
     () => [
       { key: 'name', header: 'Nome', sortable: true },
@@ -165,59 +225,8 @@ export function UsersPage() {
         ),
       },
     ],
-    [],
+    [handleResetPassword, handleToggleStatus],
   )
-
-  const handleCreateUser = () => {
-    setFormState({ open: true, mode: 'create' })
-  }
-
-  const handleToggleStatus = async (user: UserListItem) => {
-    const nextStatus = user.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
-    const response = await authenticatedFetch(`/api/users/${user.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: nextStatus }),
-    })
-    if (!response.ok) {
-      toast({ title: 'Não foi possível atualizar o status', variant: 'error' })
-      return
-    }
-    toast({ title: `Usuário ${nextStatus === 'ACTIVE' ? 'ativado' : 'desativado'}`, variant: 'success' })
-    await loadUsers(pagination.page)
-  }
-
-  const handleResetPassword = async (user: UserListItem) => {
-    const response = await authenticatedFetch('/auth/reset-password', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: user.id }),
-    })
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}))
-      toast({ title: data.error ?? 'Não foi possível resetar a senha', variant: 'error' })
-      return
-    }
-    const data = (await response.json()) as { temporaryPassword: string }
-    setResetState({ open: true, user, temporaryPassword: data.temporaryPassword })
-    toast({ title: 'Senha temporária gerada', variant: 'success' })
-  }
-
-  const handleRolesSubmit = async (userId: string, roles: UserRoleName[]) => {
-    const response = await authenticatedFetch(`/api/users/${userId}/roles`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ roles }),
-    })
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}))
-      toast({ title: data.error ?? 'Não foi possível atualizar as funções', variant: 'error' })
-      return
-    }
-    toast({ title: 'Funções atualizadas', variant: 'success' })
-    setRolesState({ open: false })
-    await loadUsers(pagination.page)
-  }
 
   const handleDelete = async (user: UserListItem) => {
     const response = await authenticatedFetch(`/api/users/${user.id}`, { method: 'DELETE' })
@@ -567,26 +576,35 @@ function RolesDialog({ state, onClose, onSubmit }: RolesDialogProps) {
     >
       <form id="roles-form" className="space-y-3" onSubmit={handleSubmit}>
         <fieldset className="space-y-3">
-          {USER_ROLES.map((role) => (
-            <label key={role} className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-3 py-2">
-              <input
-                type="checkbox"
-                checked={selectedRoles.includes(role)}
-                onChange={() => toggleRole(role)}
-                className="h-4 w-4"
-              />
-              <div>
-                <span className="text-sm font-medium text-fg">{role}</span>
-                <p className="text-xs text-fg/60">
-                  {role === 'OPERADOR'
-                    ? 'Lançamento e validação de comprovantes.'
-                    : role === 'SUPERVISOR'
-                      ? 'Aprovação de relatórios e edição de preços.'
-                      : 'Administração completa do sistema.'}
-                </p>
-              </div>
-            </label>
-          ))}
+          {USER_ROLES.map((role) => {
+            const checkboxId = `role-${role.toLowerCase()}`
+            return (
+              <label
+                key={role}
+                htmlFor={checkboxId}
+                aria-label={`Alternar permissão ${role}`}
+                className="flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-3 py-2"
+              >
+                <input
+                  id={checkboxId}
+                  type="checkbox"
+                  checked={selectedRoles.includes(role)}
+                  onChange={() => toggleRole(role)}
+                  className="h-4 w-4"
+                />
+                <div>
+                  <span className="text-sm font-medium text-fg">{role}</span>
+                  <p className="text-xs text-fg/60">
+                    {role === 'OPERADOR'
+                      ? 'Lançamento e validação de comprovantes.'
+                      : role === 'SUPERVISOR'
+                        ? 'Aprovação de relatórios e edição de preços.'
+                        : 'Administração completa do sistema.'}
+                  </p>
+                </div>
+              </label>
+            )
+          })}
         </fieldset>
       </form>
     </Dialog>

@@ -18,10 +18,8 @@ vi.mock(
         return { width: this.width, height: this.height }
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       drawText(_text: string, _options?: Record<string, unknown>) {}
 
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       drawImage(_image: unknown, _options?: Record<string, unknown>) {}
     }
 

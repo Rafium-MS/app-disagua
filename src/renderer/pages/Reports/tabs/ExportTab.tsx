@@ -67,7 +67,7 @@ export function ExportTab({ report }: ExportTabProps) {
       {lastExport && (
         <div className="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-200">
           <FolderOpen className="h-4 w-4" /> Arquivo gerado em <code>{lastExport}</code>{' '}
-          <a href="#" className="underline">
+          <a href={lastExport} className="underline" download>
             Abrir pasta
           </a>
         </div>

@@ -31,7 +31,7 @@ const storesOptions = [
   { id: 's-03', name: 'Filial Niterói' },
 ]
 
-export function ImportWizardPage({}: RouteComponentProps) {
+export function ImportWizardPage(_props: RouteComponentProps) {
   const [step, setStep] = useState(1)
   const [selection, setSelection] = useState({ reportId: 'r-001', partnerId: 'all', storeId: 'all' })
   const [uploadItems, setUploadItems] = useState<UploadItem[]>([])
@@ -59,8 +59,16 @@ export function ImportWizardPage({}: RouteComponentProps) {
     setMappingRows(buildInitialRows(items))
   }
 
-  const validCount = useMemo(() => mappingRows.filter((row) => row.checklist.assinatura && row.checklist.data && row.checklist.legivel).length, [mappingRows])
-  const pendingCount = useMemo(() => mappingRows.length - validCount, [mappingRows])
+  const { validCount, pendingCount } = useMemo(() => {
+    const valid = mappingRows.filter(
+      (row) => row.checklist.assinatura && row.checklist.data && row.checklist.legivel,
+    ).length
+
+    return {
+      validCount: valid,
+      pendingCount: mappingRows.length - valid,
+    }
+  }, [mappingRows])
 
   return (
     <div className="space-y-6">

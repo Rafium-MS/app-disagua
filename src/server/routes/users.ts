@@ -164,7 +164,7 @@ usersRouter.patch('/:id', async (req, res) => {
   if (updates.status === 'INACTIVE') {
     try {
       await ensureNotLastAdmin(id)
-    } catch (error) {
+    } catch (_error) {
       res.status(400).json({ error: (error as Error).message })
       return
     }
@@ -177,7 +177,7 @@ usersRouter.patch('/:id', async (req, res) => {
     })
     await recordAuditLog({ action: 'UPDATE_USER', entity: 'User', entityId: id, changes: updates })
     res.json({ user: mapUser(user) })
-  } catch (error) {
+  } catch (_error) {
     const code = (error as { code?: string }).code
     if (code === 'P2002') {
       res.status(409).json({ error: 'Email já utilizado' })
@@ -191,7 +191,7 @@ usersRouter.delete('/:id', async (req, res) => {
   const { id } = req.params
   try {
     await ensureNotLastAdmin(id)
-  } catch (error) {
+  } catch (_error) {
     res.status(400).json({ error: (error as Error).message })
     return
   }
@@ -203,7 +203,7 @@ usersRouter.delete('/:id', async (req, res) => {
     })
     await recordAuditLog({ action: 'DELETE_USER', entity: 'User', entityId: id })
     res.json({ user: mapUser(user) })
-  } catch (error) {
+  } catch (_error) {
     res.status(404).json({ error: 'Usuário não encontrado' })
   }
 })
@@ -242,7 +242,7 @@ usersRouter.patch('/:id/roles', async (req, res) => {
   if (!roles.includes('ADMIN')) {
     try {
       await ensureNotLastAdmin(id)
-    } catch (error) {
+    } catch (_error) {
       res.status(400).json({ error: (error as Error).message })
       return
     }

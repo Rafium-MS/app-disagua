@@ -4,8 +4,7 @@ import { z } from 'zod'
 
 import { prisma } from '../prisma'
 
-const productColumns = ['CX COPO', '10 LITROS', '20 LITROS', '1500 ML'] as const
-type ProductColumn = (typeof productColumns)[number]
+type ProductColumn = 'CX COPO' | '10 LITROS' | '20 LITROS' | '1500 ML'
 type QuantityKey = `${ProductColumn}_qtd`
 type ValueKey = `${ProductColumn}_val`
 type NumericKey = QuantityKey | ValueKey | 'TOTAL_qtd' | 'TOTAL_val'

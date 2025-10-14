@@ -94,6 +94,8 @@ export function PartnerForm({ defaultValues, onSubmit }: PartnerFormProps) {
     }
   }, [defaultValues, reset])
 
+  const getFieldId = (name: keyof PartnerFormValues) => `partner-${name}`
+
   const internalSubmit = handleSubmit((values) => {
     const parsed = schema.safeParse({
       ...values,
@@ -124,20 +126,28 @@ export function PartnerForm({ defaultValues, onSubmit }: PartnerFormProps) {
         </header>
         <div className="grid gap-4 md:grid-cols-7">
           <div className="md:col-span-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('city')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Cidade
             </label>
             <input
+              id={getFieldId('city')}
               {...register('city')}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
             />
             {errors.city && <p className="mt-1 text-xs text-rose-300">{errors.city.message}</p>}
           </div>
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('state')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Estado
             </label>
             <select
+              id={getFieldId('state')}
               {...register('state')}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
             >
@@ -150,20 +160,28 @@ export function PartnerForm({ defaultValues, onSubmit }: PartnerFormProps) {
             {errors.state && <p className="mt-1 text-xs text-rose-300">{errors.state.message}</p>}
           </div>
           <div className="md:col-span-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('name')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Parceiro
             </label>
             <input
+              id={getFieldId('name')}
               {...register('name')}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
             />
             {errors.name && <p className="mt-1 text-xs text-rose-300">{errors.name.message}</p>}
           </div>
           <div className="md:col-span-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('distributor')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Distribuidora
             </label>
             <input
+              id={getFieldId('distributor')}
               {...register('distributor')}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
             />
@@ -174,40 +192,56 @@ export function PartnerForm({ defaultValues, onSubmit }: PartnerFormProps) {
         </div>
         <div className="grid gap-4 md:grid-cols-7">
           <div className="md:col-span-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('document')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               CNPJ / CPF
             </label>
             <input
+              id={getFieldId('document')}
               {...register('document')}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
             />
             {errors.document && <p className="mt-1 text-xs text-rose-300">{errors.document.message}</p>}
           </div>
           <div className="md:col-span-2">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('phone')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Telefone
             </label>
             <input
+              id={getFieldId('phone')}
               {...register('phone')}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
             />
             {errors.phone && <p className="mt-1 text-xs text-rose-300">{errors.phone.message}</p>}
           </div>
           <div className="md:col-span-3">
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('email')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Email
             </label>
             <input
+              id={getFieldId('email')}
               {...register('email')}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
             />
             {errors.email && <p className="mt-1 text-xs text-rose-300">{errors.email.message}</p>}
           </div>
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('status')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Status
             </label>
             <select
+              id={getFieldId('status')}
               {...register('status')}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
             >
@@ -227,10 +261,14 @@ export function PartnerForm({ defaultValues, onSubmit }: PartnerFormProps) {
         </header>
         <div className="grid gap-4 md:grid-cols-4">
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('paymentDay')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Dia pagto.
             </label>
             <input
+              id={getFieldId('paymentDay')}
               type="number"
               min={1}
               max={31}
@@ -242,20 +280,28 @@ export function PartnerForm({ defaultValues, onSubmit }: PartnerFormProps) {
             )}
           </div>
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('bank')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Banco
             </label>
             <input
+              id={getFieldId('bank')}
               {...register('bank')}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
             />
             {errors.bank && <p className="mt-1 text-xs text-rose-300">{errors.bank.message}</p>}
           </div>
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('agencyAccount')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Agência e conta
             </label>
             <input
+              id={getFieldId('agencyAccount')}
               {...register('agencyAccount')}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
             />
@@ -264,10 +310,14 @@ export function PartnerForm({ defaultValues, onSubmit }: PartnerFormProps) {
             )}
           </div>
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('pixKey')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               PIX
             </label>
             <input
+              id={getFieldId('pixKey')}
               {...register('pixKey')}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950/80 px-3 py-2 text-sm text-slate-100"
               placeholder="Chave opcional"
@@ -284,10 +334,14 @@ export function PartnerForm({ defaultValues, onSubmit }: PartnerFormProps) {
         </header>
         <div className="grid gap-4 md:grid-cols-5">
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('volumeCupBox')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Cx copo
             </label>
             <input
+              id={getFieldId('volumeCupBox')}
               type="number"
               min={0}
               {...register('volumeCupBox', { valueAsNumber: true })}
@@ -298,10 +352,14 @@ export function PartnerForm({ defaultValues, onSubmit }: PartnerFormProps) {
             )}
           </div>
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('volume10L')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               10 litros
             </label>
             <input
+              id={getFieldId('volume10L')}
               type="number"
               min={0}
               {...register('volume10L', { valueAsNumber: true })}
@@ -312,10 +370,14 @@ export function PartnerForm({ defaultValues, onSubmit }: PartnerFormProps) {
             )}
           </div>
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('volume20L')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               20 litros
             </label>
             <input
+              id={getFieldId('volume20L')}
               type="number"
               min={0}
               {...register('volume20L', { valueAsNumber: true })}
@@ -326,10 +388,14 @@ export function PartnerForm({ defaultValues, onSubmit }: PartnerFormProps) {
             )}
           </div>
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('volume1500ml')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               1500 ml
             </label>
             <input
+              id={getFieldId('volume1500ml')}
               type="number"
               min={0}
               {...register('volume1500ml', { valueAsNumber: true })}
@@ -340,10 +406,14 @@ export function PartnerForm({ defaultValues, onSubmit }: PartnerFormProps) {
             )}
           </div>
           <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+            <label
+              htmlFor={getFieldId('volumeTotal')}
+              className="text-xs font-semibold uppercase tracking-wide text-slate-400"
+            >
               Total
             </label>
             <input
+              id={getFieldId('volumeTotal')}
               readOnly
               value={totalVolume}
               className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm font-semibold text-emerald-300"
