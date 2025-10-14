@@ -22,6 +22,7 @@ Projeto base com:
 - [Auditoria e diretórios de dados](#auditoria-e-diretórios-de-dados)
 - [Estrutura](#estrutura)
 - [Tailwind + shadcn/ui](#tailwind--shadcnui)
+- [Segurança Electron](#segurança-electron)
 - [Observações de desenvolvimento](#observações-de-desenvolvimento)
 - [Testes](#testes)
 
@@ -176,6 +177,13 @@ Para sincronizar lojas diretamente via linha de comando, utilize o script `npm r
 - Utilitários de classe: `src/renderer/lib/utils.ts` (usa `clsx`/`tailwind-merge`).
 
 Para adicionar mais componentes shadcn no futuro, você pode usar o CLI oficial (`npx shadcn-ui@latest add button`), ajustando `components.json`, ou copiar padrões do repositório.
+
+## Segurança Electron
+
+- O `BrowserWindow` roda com `contextIsolation: true` e `nodeIntegration: false`, evitando acesso direto aos módulos do Node no renderer.
+- O processo principal injeta uma política de segurança de conteúdo (CSP) rígida: em produção bloqueia scripts externos e restringe conexões ao servidor interno (`http://localhost:5174`); em desenvolvimento libera apenas os recursos do Vite (`http://localhost:5173` e `ws://localhost:5173`) necessários para HMR.
+- Navegações e aberturas de janela externas são negadas por padrão; URLs HTTPS confiáveis são redirecionadas via utilitário `openExternalSafe`, que rejeita qualquer protocolo inseguro.
+- Não há uso de `eval` ou `new Function` no código base, reduzindo a superfície de injeção dinâmica de scripts.
 
 ## Observações de desenvolvimento
 
