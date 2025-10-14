@@ -29,6 +29,11 @@ const createPrismaMock = () => {
     createMany: vi.fn(),
   }
 
+  const storeDeliveredProduct = {
+    deleteMany: vi.fn(),
+    createMany: vi.fn(),
+  }
+
   const partner = {
     findUnique: vi.fn(),
     findFirst: vi.fn(),
@@ -42,6 +47,7 @@ const createPrismaMock = () => {
     store,
     brand,
     storePrice,
+    storeDeliveredProduct,
     partner,
     voucher,
     $transaction: vi.fn(async (arg: unknown) => {
@@ -148,6 +154,7 @@ describe('Stores router', () => {
       where: { id: 'sto_1' },
       include: {
         prices: true,
+        deliveredProducts: { select: { product: true } },
         brand: { select: { id: true, name: true, code: true } },
         partner: { select: { id: true, name: true } },
       },
@@ -166,6 +173,7 @@ describe('Stores router', () => {
         city: 'São Paulo',
         state: 'SP',
         postalCode: null,
+        deliveredProducts: [{ id: 'dp_1', product: 'GALAO_10L', storeId: 'sto_1' }],
       })
       .mockResolvedValueOnce({
         id: 'sto_1',
@@ -181,6 +189,7 @@ describe('Stores router', () => {
         prices: [
           { id: 'price_1', storeId: 'sto_1', product: 'GALAO_10L', unitCents: 1500 },
         ],
+        deliveredProducts: [{ id: 'dp_2', product: 'GALAO_10L', storeId: 'sto_1' }],
         brand: { id: 'bra_1', name: 'Marca Nova', code: null },
         partner: { id: 1, name: 'Parceiro' },
       })
@@ -198,6 +207,7 @@ describe('Stores router', () => {
         state: 'SP',
         postalCode: '01000000',
         prices: [{ product: 'GALAO_10L', unitValueBRL: '15,00' }],
+        deliveredProducts: ['GALAO_10L'],
         status: 'ACTIVE',
       })
 
@@ -214,6 +224,10 @@ describe('Stores router', () => {
     expect(prismaMock.storePrice.deleteMany).toHaveBeenCalledWith({ where: { storeId: 'sto_1' } })
     expect(prismaMock.storePrice.createMany).toHaveBeenCalledWith({
       data: [{ storeId: 'sto_1', product: 'GALAO_10L', unitCents: 1500 }],
+    })
+    expect(prismaMock.storeDeliveredProduct.deleteMany).toHaveBeenCalledWith({ where: { storeId: 'sto_1' } })
+    expect(prismaMock.storeDeliveredProduct.createMany).toHaveBeenCalledWith({
+      data: [{ storeId: 'sto_1', product: 'GALAO_10L' }],
     })
   })
 
