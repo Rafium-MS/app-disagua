@@ -3,7 +3,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { centsToBRL } from '@shared/store-utils'
 import { useAuth } from '@/hooks/useAuth'
 
-type MonthlySummaryRow = {
+import { buildMonthlySummaryCsv, buildMonthlySummaryFilename } from './monthly-summary-export'
+
+export type MonthlySummaryRow = {
   partnerId: number
   CIDADE: string | null
   ESTADO: string | null
@@ -31,7 +33,7 @@ type MonthlySummaryRow = {
   missingPriceProducts: string[]
 }
 
-type NumericKey =
+export type NumericKey =
   | 'CX COPO_qtd'
   | 'CX COPO_val'
   | '10 LITROS_qtd'
@@ -43,7 +45,7 @@ type NumericKey =
   | 'TOTAL_qtd'
   | 'TOTAL_val'
 
-type MonthlySummaryResponse = {
+export type MonthlySummaryResponse = {
   month: string
   currency: string
   rows: MonthlySummaryRow[]
@@ -87,7 +89,7 @@ export async function loadMonthlySummary(
   return payload as MonthlySummaryResponse
 }
 
-const numericKeys: NumericKey[] = [
+export const numericKeys: NumericKey[] = [
   'CX COPO_qtd',
   'CX COPO_val',
   '10 LITROS_qtd',
@@ -203,90 +205,18 @@ export default function PartnersMonthlyTable({ month }: PartnersMonthlyTableProp
       return
     }
 
-    const header = [
-      'CIDADE',
-      'ESTADO',
-      'PARCEIRO',
-      'DISTRIBUIDORA',
-      'CNPJ/CPF',
-      'TELEFONE',
-      'EMAIL',
-      'DIA PAGTO.',
-      'BANCO',
-      'AGÊNCIA E CONTA',
-      'PIX',
-      'CX COPO (qtd)',
-      'CX COPO (R$)',
-      '10 LITROS (qtd)',
-      '10 LITROS (R$)',
-      '20 LITROS (qtd)',
-      '20 LITROS (R$)',
-      '1500 ML (qtd)',
-      '1500 ML (R$)',
-      'TOTAL (qtd)',
-      'TOTAL (R$)'
-    ]
-
-    const rows = filteredRows.length ? filteredRows : data.rows
-    const exportTotals = filteredRows.length ? totals : data.totals
-
-    const csvRows = rows.map((row) => [
-      row.CIDADE ?? '-',
-      row.ESTADO ?? '-',
-      row.PARCEIRO,
-      row.DISTRIBUIDORA ?? '-',
-      row['CNPJ/CPF'] ?? '-',
-      row.TELEFONE ?? '-',
-      row.EMAIL ?? '-',
-      row['DIA PAGTO.'] ?? '-',
-      row.BANCO ?? '-',
-      row['AGÊNCIA E CONTA'] ?? '-',
-      row.PIX ?? '-',
-      String(row['CX COPO_qtd']),
-      centsToBRL(row['CX COPO_val']),
-      String(row['10 LITROS_qtd']),
-      centsToBRL(row['10 LITROS_val']),
-      String(row['20 LITROS_qtd']),
-      centsToBRL(row['20 LITROS_val']),
-      String(row['1500 ML_qtd']),
-      centsToBRL(row['1500 ML_val']),
-      String(row.TOTAL_qtd),
-      centsToBRL(row.TOTAL_val)
-    ])
-
-    const totalsRow = [
-      'Totais',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      '',
-      String(exportTotals['CX COPO_qtd'] ?? 0),
-      centsToBRL(exportTotals['CX COPO_val'] ?? 0),
-      String(exportTotals['10 LITROS_qtd'] ?? 0),
-      centsToBRL(exportTotals['10 LITROS_val'] ?? 0),
-      String(exportTotals['20 LITROS_qtd'] ?? 0),
-      centsToBRL(exportTotals['20 LITROS_val'] ?? 0),
-      String(exportTotals['1500 ML_qtd'] ?? 0),
-      centsToBRL(exportTotals['1500 ML_val'] ?? 0),
-      String(exportTotals.TOTAL_qtd ?? 0),
-      centsToBRL(exportTotals.TOTAL_val ?? 0)
-    ]
-
-    const csvContent = [header, ...csvRows, totalsRow]
-      .map((line) => line.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
-      .join('\n')
+    const csvContent = buildMonthlySummaryCsv({
+      rows: data.rows,
+      totals: data.totals,
+      filteredRows,
+      filteredTotals: totals,
+    })
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const anchor = document.createElement('a')
     anchor.href = url
-    anchor.download = `resumo-parceiros-${month}.csv`
+    anchor.download = buildMonthlySummaryFilename(month)
     anchor.click()
     URL.revokeObjectURL(url)
   }
