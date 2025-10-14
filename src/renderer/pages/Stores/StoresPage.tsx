@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Building2, RefreshCw, Upload, Search } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Building2, RefreshCw, Upload, Search, GitMerge } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { useNavigate } from '@/routes/RouterProvider'
@@ -30,7 +30,6 @@ type StoreListItem = {
   cnpj?: string | null
   updatedAt: string
   partner?: { id: number; name: string | null } | null
-  brand?: { id: string; name: string | null } | null
   prices: Array<{ product: StoreProductType; unitCents: number }>
 }
 
@@ -43,7 +42,6 @@ type Pagination = {
 
 type FiltersState = {
   partnerId: string
-  brandId: string
   city: string
   state: string
   mall: string
@@ -54,7 +52,6 @@ type FiltersState = {
 
 const initialFilters: FiltersState = {
   partnerId: '',
-  brandId: '',
   city: '',
   state: '',
   mall: '',
@@ -90,7 +87,6 @@ export function StoresPage() {
   const { toast } = useToast()
   const [stores, setStores] = useState<StoreListItem[]>([])
   const [partners, setPartners] = useState<PartnerOption[]>([])
-  const [brands, setBrands] = useState<{ id: string; name: string }[]>([])
   const [filters, setFilters] = useState<FiltersState>(() => {
     if (typeof window === 'undefined') {
       return initialFilters
@@ -99,7 +95,8 @@ export function StoresPage() {
       const stored = window.localStorage.getItem(LOCAL_STORAGE_KEY)
       if (!stored) return initialFilters
       const parsed = JSON.parse(stored)
-      return { ...initialFilters, ...parsed }
+      const { brandId: _unusedBrandId, ...rest } = typeof parsed === 'object' && parsed ? parsed : {}
+      return { ...initialFilters, ...rest }
     } catch (error) {
       console.warn('Não foi possível restaurar filtros salvos', error)
       return initialFilters
@@ -107,7 +104,6 @@ export function StoresPage() {
   })
   const [pagination, setPagination] = useState<Pagination>({ page: 1, pageSize: 20, total: 0, totalPages: 0 })
   const [loading, setLoading] = useState(false)
-  const [brandsLoading, setBrandsLoading] = useState(false)
 
   useEffect(() => {
     async function loadPartners() {
@@ -132,33 +128,6 @@ export function StoresPage() {
   }, [filters])
 
   useEffect(() => {
-    if (!filters.partnerId) {
-      setBrands([])
-      return
-    }
-    const controller = new AbortController()
-    async function loadBrands() {
-      setBrandsLoading(true)
-      try {
-        const params = new URLSearchParams({ partnerId: filters.partnerId, pageSize: '200' })
-        const response = await fetch(`/api/brands?${params.toString()}`, { signal: controller.signal })
-        if (!response.ok) throw new Error('Falha ao carregar marcas')
-        const payload = await response.json()
-        setBrands(payload.data ?? [])
-      } catch (error) {
-        if (!controller.signal.aborted) {
-          console.error(error)
-          toast({ title: 'Erro ao carregar marcas', variant: 'error' })
-        }
-      } finally {
-        setBrandsLoading(false)
-      }
-    }
-    loadBrands()
-    return () => controller.abort()
-  }, [filters.partnerId, toast])
-
-  useEffect(() => {
     const controller = new AbortController()
     async function loadStores() {
       setLoading(true)
@@ -168,7 +137,6 @@ export function StoresPage() {
           pageSize: '20',
         })
         if (filters.partnerId) params.set('partnerId', filters.partnerId)
-        if (filters.brandId) params.set('brandId', filters.brandId)
         if (filters.city) params.set('city', filters.city)
         if (filters.state) params.set('state', filters.state.toUpperCase())
         if (filters.mall) params.set('mall', filters.mall)
@@ -192,8 +160,6 @@ export function StoresPage() {
     loadStores()
     return () => controller.abort()
   }, [filters, toast])
-
-  const brandOptions = useMemo(() => [{ id: '', name: 'Todas' }, ...brands], [brands])
 
   const handleFilterChange = (patch: Partial<FiltersState>) => {
     setFilters((previous) => {
@@ -226,6 +192,9 @@ export function StoresPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => navigate('/stores/match')} className="flex items-center gap-2">
+            <GitMerge className="h-4 w-4" /> Combinar parceiros
+          </Button>
           <Button variant="outline" onClick={handleRefresh} disabled={loading} className="flex items-center gap-2">
             <RefreshCw className="h-4 w-4" /> Atualizar
           </Button>
@@ -243,7 +212,7 @@ export function StoresPage() {
 
       <div className="rounded-xl border border-border bg-card/40 p-4">
         <form onSubmit={handleSearchSubmit} className="flex flex-col gap-3">
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2">
             <div className="flex flex-col gap-1">
               <label htmlFor="partner" className="text-sm font-medium text-fg/80">
                 Parceiro
@@ -251,31 +220,13 @@ export function StoresPage() {
               <select
                 id="partner"
                 value={filters.partnerId}
-                onChange={(event) => handleFilterChange({ partnerId: event.target.value, brandId: '' })}
+                onChange={(event) => handleFilterChange({ partnerId: event.target.value })}
                 className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-emerald-400"
               >
                 <option value="">Todos</option>
                 {partners.map((partner) => (
                   <option key={partner.id} value={partner.id}>
                     {partner.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="brand" className="text-sm font-medium text-fg/80">
-                Marca
-              </label>
-              <select
-                id="brand"
-                value={filters.brandId}
-                onChange={(event) => handleFilterChange({ brandId: event.target.value })}
-                disabled={!filters.partnerId || brandsLoading}
-                className="w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-fg focus:outline-none focus:ring-2 focus:ring-emerald-400"
-              >
-                {brandOptions.map((brand) => (
-                  <option key={brand.id} value={brand.id}>
-                    {brand.id === '' ? 'Todas' : brand.name}
                   </option>
                 ))}
               </select>
@@ -362,7 +313,6 @@ export function StoresPage() {
               <tr>
                 <th className="px-4 py-3 text-left">Loja</th>
                 <th className="px-4 py-3 text-left">Parceiro</th>
-                <th className="px-4 py-3 text-left">Marca</th>
                 <th className="px-4 py-3 text-left">Localização</th>
                 <th className="px-4 py-3 text-left">Preço destaque</th>
                 <th className="px-4 py-3 text-left">Status</th>
@@ -380,11 +330,6 @@ export function StoresPage() {
                   <td className="px-4 py-3">
                     <div className="text-sm text-fg">
                       {store.partner?.name ?? '—'}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="text-sm text-fg">
-                      {store.brand?.name ?? '—'}
                     </div>
                   </td>
                   <td className="px-4 py-3 text-sm text-fg/80">

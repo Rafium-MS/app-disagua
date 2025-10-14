@@ -1,4 +1,4 @@
-import type { PrismaClient } from '@prisma/client'
+import type { Prisma, PrismaClient } from '@prisma/client'
 import { Router } from 'express'
 import { z } from 'zod'
 
@@ -12,8 +12,19 @@ const partnersQuerySchema = z
       .trim()
       .transform((value) => value || undefined)
       .optional(),
+    state: z
+      .string()
+      .trim()
+      .length(2)
+      .transform((value) => value.toUpperCase())
+      .optional(),
+    city: z
+      .string()
+      .trim()
+      .transform((value) => (value.length ? value : undefined))
+      .optional(),
     page: z.coerce.number().int().min(1).default(1),
-    pageSize: z.coerce.number().int().min(1).max(100).default(10)
+    pageSize: z.coerce.number().int().min(1).max(200).default(10)
   })
   .strict()
 
@@ -22,23 +33,37 @@ const createPartnersRouter = ({ prisma: prismaClient }: { prisma: PrismaClient }
 
   partnersRouter.get('/', async (req, res) => {
     try {
-      const { search, page, pageSize } = partnersQuerySchema.parse(req.query)
+      const { search, page, pageSize, state, city } = partnersQuerySchema.parse(req.query)
 
-      const where = search
-        ? {
-            OR: [
-              { name: insensitiveContains<'Partner'>(search) },
-              { document: { contains: search } },
-              { email: insensitiveContains<'Partner'>(search) }
-            ]
-          }
-        : undefined
+      const where: Prisma.PartnerWhereInput = {}
+
+      if (state) {
+        where.state = {
+          equals: state,
+          mode: 'insensitive'
+        }
+      }
+
+      if (city) {
+        where.city = {
+          equals: city,
+          mode: 'insensitive'
+        }
+      }
+
+      if (search) {
+        where.OR = [
+          { name: insensitiveContains<'Partner'>(search) },
+          { document: { contains: search } },
+          { email: insensitiveContains<'Partner'>(search) }
+        ]
+      }
 
       const skip = (page - 1) * pageSize
 
       const [partners, total] = await prismaClient.$transaction([
         prismaClient.partner.findMany({
-          where,
+          where: Object.keys(where).length ? where : undefined,
           orderBy: { name: 'asc' },
           skip,
           take: pageSize,
@@ -51,7 +76,7 @@ const createPartnersRouter = ({ prisma: prismaClient }: { prisma: PrismaClient }
             updatedAt: true
           }
         }),
-        prismaClient.partner.count({ where })
+        prismaClient.partner.count({ where: Object.keys(where).length ? where : undefined })
       ])
 
       res.json({

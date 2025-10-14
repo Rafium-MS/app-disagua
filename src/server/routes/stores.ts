@@ -85,6 +85,12 @@ const mergeSchema = z
   })
   .strict()
 
+const updatePartnerSchema = z
+  .object({
+    partnerId: z.coerce.number().int().positive(),
+  })
+  .strict()
+
 const createStoresRouter = ({ prisma }: { prisma: PrismaClient }) => {
 const router = Router()
 
@@ -153,6 +159,60 @@ const router = Router()
     }
   })
 
+  router.get('/filters/locations', async (_req, res) => {
+    try {
+      const [states, cities] = await Promise.all([
+        prisma.store.findMany({
+          select: { state: true },
+          distinct: ['state'],
+          orderBy: { state: 'asc' },
+        }),
+        prisma.store.findMany({
+          select: { state: true, city: true },
+          distinct: ['state', 'city'],
+          orderBy: [{ state: 'asc' }, { city: 'asc' }],
+        }),
+      ])
+
+      const uniqueStates = Array.from(
+        new Set(
+          states
+            .map((entry) => entry.state?.trim().toUpperCase())
+            .filter((state): state is string => Boolean(state)),
+        ),
+      ).sort((a, b) => a.localeCompare(b, 'pt-BR'))
+
+      const citiesByState = cities.reduce<Record<string, string[]>>((accumulator, entry) => {
+        const state = entry.state?.trim().toUpperCase()
+        const city = entry.city?.trim()
+        if (!state || !city) {
+          return accumulator
+        }
+        if (!accumulator[state]) {
+          accumulator[state] = []
+        }
+        if (!accumulator[state].includes(city)) {
+          accumulator[state].push(city)
+        }
+        return accumulator
+      }, {})
+
+      for (const state of Object.keys(citiesByState)) {
+        citiesByState[state].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+      }
+
+      res.json({
+        data: {
+          states: uniqueStates,
+          citiesByState,
+        },
+      })
+    } catch (error) {
+      console.error('Erro ao carregar filtros de localização das lojas', error)
+      res.status(500).json({ error: 'Não foi possível carregar os filtros de localização' })
+    }
+  })
+
   router.get('/:id', async (req, res) => {
     try {
       const { id } = req.params
@@ -190,6 +250,44 @@ const router = Router()
       res.json(result)
     } catch (error) {
       handleStoreError(error, res)
+    }
+  })
+
+  router.patch('/:id/partner', async (req, res) => {
+    try {
+      const payload = updatePartnerSchema.parse(req.body)
+      const { id } = req.params
+
+      const partner = await prisma.partner.findUnique({ where: { id: payload.partnerId } })
+      if (!partner) {
+        res.status(404).json({ error: 'Parceiro não encontrado' })
+        return
+      }
+
+      const updated = await prisma.store.update({
+        where: { id },
+        data: { partnerId: payload.partnerId, brandId: null },
+        select: {
+          id: true,
+          partnerId: true,
+          partner: { select: { id: true, name: true } },
+        },
+      })
+
+      res.json({ data: updated })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: 'Dados inválidos', details: error.flatten().fieldErrors })
+        return
+      }
+
+      if (isNotFound(error)) {
+        res.status(404).json({ error: 'Loja não encontrada' })
+        return
+      }
+
+      console.error('Erro ao atualizar parceiro da loja', error)
+      res.status(500).json({ error: 'Não foi possível atualizar o parceiro da loja' })
     }
   })
 
