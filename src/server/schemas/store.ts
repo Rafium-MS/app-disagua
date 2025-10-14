@@ -96,6 +96,20 @@ const applyBrandSelectionValidation = <Schema extends AnyZodObject>(schema: Sche
     }
   })
 
+const deliveredProductsSchema = z
+  .array(productEnum)
+  .optional()
+  .transform((value) => {
+    if (!value) {
+      return []
+    }
+    const unique = new Set<z.infer<typeof productEnum>>()
+    for (const product of value) {
+      unique.add(product)
+    }
+    return Array.from(unique)
+  })
+
 const storeBaseObject = z
   .object({
     partnerId: z.coerce.number().int().positive(),
@@ -127,6 +141,7 @@ const storeBaseObject = z
     postalCode: optionalString,
     status: z.enum(['ACTIVE', 'INACTIVE']).default('ACTIVE'),
     prices: z.array(storePriceSchema).default([]),
+    deliveredProducts: deliveredProductsSchema,
   })
 
 export const storeBaseSchema = applyBrandSelectionValidation(storeBaseObject)

@@ -159,6 +159,7 @@ model Store {
   postalCode     String?
   status         String      @default("ACTIVE")
   prices         StorePrice[]
+  deliveredProducts StoreDeliveredProduct[]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
   vouchers       Voucher[]
@@ -173,6 +174,15 @@ model StorePrice {
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   product   String
   unitCents Int
+
+  @@unique([storeId, product])
+}
+
+model StoreDeliveredProduct {
+  id      String @id @default(cuid())
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product String
 
   @@unique([storeId, product])
 }

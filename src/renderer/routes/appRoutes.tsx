@@ -68,6 +68,14 @@ export const routeDefinitions: RouteDefinition[] = [
     path: '/stores/new',
     label: 'Nova loja',
     icon: Building2,
+    component: lazy(() => import('../pages/Stores/StoreBrandSelectionPage').then((module) => ({
+      default: module.StoreBrandSelectionPage,
+    }))),
+  },
+  {
+    path: '/stores/new/form',
+    label: 'Cadastro da loja',
+    icon: Building2,
     component: lazy(() => import('../pages/Stores/StoreFormPage').then((module) => ({
       default: module.StoreFormPage,
     }))),

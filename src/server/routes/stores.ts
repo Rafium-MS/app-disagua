@@ -27,6 +27,7 @@ const upload = multer({ storage: multer.memoryStorage() })
 
 const storeDefaultInclude = {
   prices: true,
+  deliveredProducts: { select: { product: true } },
   brand: { select: { id: true, name: true, code: true } },
   partner: { select: { id: true, name: true } },
 } satisfies Prisma.StoreInclude
@@ -299,6 +300,7 @@ async function createStore(prisma: PrismaClient, payload: z.infer<typeof storeCr
   const normalized = normalizeName(payload.name)
   const addressParts = parseBrazilAddress(payload.addressRaw)
   const prices = mapPrices(payload.prices ?? [])
+  const deliveredProducts = mapDeliveredProducts(payload.deliveredProducts)
 
   return prisma.store.create({
     data: {
@@ -321,6 +323,9 @@ async function createStore(prisma: PrismaClient, payload: z.infer<typeof storeCr
       postalCode: coalesce(payload.postalCode, addressParts.postalCode),
       status: payload.status,
       prices: prices.length ? { create: prices } : undefined,
+      deliveredProducts: deliveredProducts.length
+        ? { create: deliveredProducts.map((product) => ({ product })) }
+        : undefined,
     },
     include: storeDefaultInclude,
   })
@@ -338,6 +343,7 @@ async function updateStore(prisma: PrismaClient, id: string, payload: z.infer<ty
   const normalized = normalizeName(payload.name)
   const addressParts = parseBrazilAddress(payload.addressRaw)
   const prices = mapPrices(payload.prices ?? [])
+  const deliveredProducts = mapDeliveredProducts(payload.deliveredProducts)
 
   return prisma.$transaction(async (tx) => {
     await tx.store.update({
@@ -369,6 +375,14 @@ async function updateStore(prisma: PrismaClient, id: string, payload: z.infer<ty
     if (prices.length) {
       await tx.storePrice.createMany({
         data: prices.map((price) => ({ storeId: id, ...price })),
+      })
+    }
+
+    await tx.storeDeliveredProduct.deleteMany({ where: { storeId: id } })
+
+    if (deliveredProducts.length) {
+      await tx.storeDeliveredProduct.createMany({
+        data: deliveredProducts.map((product) => ({ storeId: id, product })),
       })
     }
 
@@ -434,6 +448,19 @@ function mapPrices(prices: Array<{ product?: ProductValue | null; unitValueBRL?:
       return { product: price.product as ProductValue, unitCents: cents }
     })
     .filter((value): value is PricePayload => value !== null)
+}
+
+function mapDeliveredProducts(products?: Array<ProductValue | null | undefined> | null): ProductValue[] {
+  if (!Array.isArray(products)) {
+    return []
+  }
+  const unique = new Set<ProductValue>()
+  for (const product of products) {
+    if (product && productValues.includes(product)) {
+      unique.add(product)
+    }
+  }
+  return Array.from(unique)
 }
 
 function sanitize(value?: string | null): string | null {
