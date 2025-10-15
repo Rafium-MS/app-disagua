@@ -5,7 +5,8 @@
   "type": "module",
   "main": "electron/main.ts",
   "scripts": {
-    "predev": "npm run generate --silent",
+    "migrate:deploy": "prisma migrate deploy",
+    "predev": "npm run migrate:deploy --silent && npm run generate --silent",
     "dev": "concurrently -k -n VITE,ELECTRON \"vite\" \"wait-on tcp:5173 && electron electron/dev-main.cjs\"",
     "server": "tsx src/server/index.ts",
     "migrate": "prisma migrate dev --skip-generate --skip-seed",
