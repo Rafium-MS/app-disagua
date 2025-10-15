@@ -30,14 +30,6 @@ model Partner {
   brands      Brand[]
 }
 
-enum ProductType {
-  GALAO_20L
-  GALAO_10L
-  PET_1500ML
-  CAIXA_COPO
-  VASILHAME
-}
-
 model Brand {
   id        String   @id @default(cuid())
   partnerId Int
@@ -50,11 +42,6 @@ model Brand {
   stores Store[]
 
   @@unique([partnerId, name])
-}
-
-enum StoreStatus {
-  ACTIVE
-  INACTIVE
 }
 
 model Report {
@@ -184,7 +171,7 @@ model StorePrice {
   id        String   @id @default(cuid())
   storeId   String
   store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  product   ProductType
+  product   String
   unitCents Int
 
   @@unique([storeId, product])
