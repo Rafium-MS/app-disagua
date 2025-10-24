@@ -14,6 +14,7 @@ import type {
   LoginRequest,
   LoginResponse,
 } from '@shared/auth'
+import { createApiUrl } from '@/config/api'
 
 const SESSION_STORAGE_KEY = 'app.auth.user'
 
@@ -74,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const promise = (async () => {
       try {
-        const response = await fetch('/auth/refresh', {
+        const response = await fetch(createApiUrl('/auth/refresh'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -116,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(
     async (credentials: LoginRequest) => {
       try {
-        const response = await fetch('/auth/login', {
+        const response = await fetch(createApiUrl('/auth/login'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(credentials),
@@ -138,7 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     try {
-      await fetch('/auth/logout', {
+      await fetch(createApiUrl('/auth/logout'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -167,12 +168,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const authenticatedFetch = useCallback(
     async (input: RequestInfo, init?: RequestInit) => {
+      // Converte caminhos relativos em URLs absolutas usando createApiUrl
+      const url = typeof input === 'string' ? createApiUrl(input) : input
+
       const headers = new Headers(init?.headers)
       if (accessToken) {
         headers.set('Authorization', `Bearer ${accessToken}`)
       }
 
-      const response = await fetch(input, {
+      const response = await fetch(url, {
         ...init,
         headers,
         credentials: 'include',
@@ -194,7 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         retryHeaders.set('Authorization', `Bearer ${latestToken}`)
       }
 
-      return fetch(input, {
+      return fetch(url, {
         ...init,
         headers: retryHeaders,
         credentials: 'include',
