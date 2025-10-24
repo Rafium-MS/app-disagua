@@ -1,6 +1,7 @@
 import { type ReactNode, useState } from 'react'
 import { AppSidebar } from './AppSidebar'
 import { AppTopbar } from './AppTopbar'
+import { ErrorBoundary } from '../ErrorBoundary'
 
 type AppLayoutProps = {
   children: ReactNode
@@ -19,7 +20,9 @@ export function AppLayout({ children, topRight }: AppLayoutProps) {
       <main className="min-w-0">
         <AppTopbar onOpenSidebar={() => setSidebarOpen(true)} topRight={topRight} />
         <section className="p-3 sm:p-4 md:p-6">
-          <div className="container mx-auto min-w-0 space-y-6">{children}</div>
+          <div className="container mx-auto min-w-0 space-y-6">
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </div>
         </section>
       </main>
 

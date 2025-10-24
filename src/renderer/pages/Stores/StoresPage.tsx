@@ -4,6 +4,8 @@ import { useToast } from '@/components/ui/toast'
 import { Button } from '@/components/ui/button'
 import { storeProductLabels } from '@shared/store-utils'
 import { Loader2, Plus, Upload, Pencil, Trash2 } from 'lucide-react'
+import { TableLoadingRow } from '@/components/TableSkeleton'
+import { ErrorAlert } from '@/components/ui/error-alert'
 
 type StoreListItem = {
   id: string
@@ -74,12 +76,15 @@ export function StoresPage() {
   const [pagination, setPagination] = useState({ page: 1, size: 20, total: 0, totalPages: 0 })
   const [filters, setFilters] = useState<FiltersState>(initialFilters)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
+  const [brandError, setBrandError] = useState<Error | null>(null)
   const brandId = params.brandId
 
   useEffect(() => {
     let active = true
     async function loadBrand() {
       if (!brandId) return
+      setBrandError(null)
       try {
         const response = await fetch(`/api/brands/${brandId}`)
         if (!response.ok) throw new Error('Não foi possível carregar a marca')
@@ -89,7 +94,11 @@ export function StoresPage() {
         }
       } catch (error) {
         console.error(error)
-        toast({ title: 'Erro ao carregar marca', variant: 'error' })
+        const err = error instanceof Error ? error : new Error('Erro ao carregar marca')
+        if (active) {
+          setBrandError(err)
+          toast({ title: 'Erro ao carregar marca', variant: 'error' })
+        }
       }
     }
     loadBrand()
@@ -105,6 +114,7 @@ export function StoresPage() {
     const controller = new AbortController()
     async function loadStores() {
       setLoading(true)
+      setError(null)
       try {
         const params = new URLSearchParams({ brandId, page: String(filters.page), size: '20' })
         if (filters.city) params.set('city', filters.city)
@@ -121,6 +131,8 @@ export function StoresPage() {
       } catch (error) {
         if (!controller.signal.aborted) {
           console.error(error)
+          const err = error instanceof Error ? error : new Error('Erro ao carregar lojas')
+          setError(err)
           toast({ title: 'Erro ao carregar lojas', variant: 'error' })
         }
       } finally {
@@ -135,11 +147,14 @@ export function StoresPage() {
     setFilters((previous) => ({ ...previous, ...patch, page: patch.page ?? 1 }))
   }
 
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
   const handleDelete = async (storeId: string) => {
     const confirmation = window.confirm('Deseja remover esta loja?')
     if (!confirmation) {
       return
     }
+    setDeletingId(storeId)
     try {
       const response = await fetch(`/api/stores/${storeId}`, { method: 'DELETE' })
       if (!response.ok) throw new Error('Não foi possível remover a loja')
@@ -148,6 +163,8 @@ export function StoresPage() {
     } catch (error) {
       console.error(error)
       toast({ title: 'Erro ao remover loja', variant: 'error' })
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -239,6 +256,14 @@ export function StoresPage() {
         </div>
       </section>
 
+      {error && (
+        <ErrorAlert
+          title="Erro ao carregar lojas"
+          error={error}
+          onRetry={() => setFilters((previous) => ({ ...previous }))}
+        />
+      )}
+
       <section className="rounded-xl border border-border bg-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-border text-sm">
@@ -255,11 +280,7 @@ export function StoresPage() {
             </thead>
             <tbody className="divide-y divide-border text-fg">
               {loading ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-sm text-fg/60">
-                    <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-                  </td>
-                </tr>
+                <TableLoadingRow columns={7} />
               ) : stores.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-4 py-6 text-center text-sm text-fg/60">
@@ -293,6 +314,7 @@ export function StoresPage() {
                           size="sm"
                           onClick={() => navigate(`/stores/${store.id}/edit?brandId=${brandId ?? ''}`)}
                           className="flex items-center gap-2"
+                          disabled={deletingId === store.id}
                         >
                           <Pencil className="h-4 w-4" /> Editar
                         </Button>
@@ -300,9 +322,15 @@ export function StoresPage() {
                           variant="destructive"
                           size="sm"
                           onClick={() => handleDelete(store.id)}
+                          disabled={deletingId === store.id}
                           className="flex items-center gap-2"
                         >
-                          <Trash2 className="h-4 w-4" /> Remover
+                          {deletingId === store.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          Remover
                         </Button>
                       </div>
                     </td>

@@ -4,6 +4,8 @@ import { Plus, Pencil, Trash2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
+import { TableLoadingRow } from '@/components/TableSkeleton'
+import { ErrorAlert } from '@/components/ui/error-alert'
 
 type PartnerOption = {
   id: number
@@ -45,10 +47,12 @@ export function BrandsPage() {
   const [pagination, setPagination] = useState<Pagination>({ page: 1, size: 10, total: 0, totalPages: 0 })
   const [filters, setFilters] = useState({ partnerId: '', q: '', page: 1 })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [formState, setFormState] = useState<BrandFormState>(defaultFormState)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -73,6 +77,7 @@ export function BrandsPage() {
 
   const loadBrands = useCallback(async () => {
     setLoading(true)
+    setError(null)
     try {
       const params = new URLSearchParams({ page: String(filters.page), size: '10' })
       if (filters.partnerId) params.set('partnerId', filters.partnerId)
@@ -85,6 +90,8 @@ export function BrandsPage() {
       setPagination(payload.pagination ?? { page: filters.page, size: 10, total: 0, totalPages: 0 })
     } catch (error) {
       console.error(error)
+      const err = error instanceof Error ? error : new Error('Não foi possível carregar as marcas')
+      setError(err)
       toast({ title: 'Não foi possível carregar as marcas', variant: 'error' })
     } finally {
       setLoading(false)
@@ -116,6 +123,7 @@ export function BrandsPage() {
     if (!confirmation) {
       return
     }
+    setDeletingId(brand.id)
     try {
       const response = await fetch(`/api/brands/${brand.id}`, { method: 'DELETE' })
       if (!response.ok) throw new Error('Não foi possível remover a marca')
@@ -124,6 +132,8 @@ export function BrandsPage() {
     } catch (error) {
       console.error(error)
       toast({ title: 'Erro ao remover marca', variant: 'error' })
+    } finally {
+      setDeletingId(null)
     }
   }
 
@@ -224,6 +234,14 @@ export function BrandsPage() {
         </form>
       </section>
 
+      {error && (
+        <ErrorAlert
+          title="Erro ao carregar marcas"
+          error={error}
+          onRetry={loadBrands}
+        />
+      )}
+
       <section className="rounded-xl border border-border bg-card shadow-sm">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-border text-sm">
@@ -238,11 +256,7 @@ export function BrandsPage() {
             </thead>
             <tbody className="divide-y divide-border text-fg">
               {loading ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-6 text-center text-sm text-fg/60">
-                    <Loader2 className="mx-auto h-5 w-5 animate-spin" />
-                  </td>
-                </tr>
+                <TableLoadingRow columns={5} />
               ) : brands.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-6 text-center text-sm text-fg/60">
@@ -265,6 +279,7 @@ export function BrandsPage() {
                           size="sm"
                           onClick={() => openEditDialog(brand)}
                           className="flex items-center gap-2"
+                          disabled={deletingId === brand.id}
                         >
                           <Pencil className="h-4 w-4" /> Editar
                         </Button>
@@ -272,9 +287,15 @@ export function BrandsPage() {
                           variant="destructive"
                           size="sm"
                           onClick={() => handleDelete(brand)}
+                          disabled={deletingId === brand.id}
                           className="flex items-center gap-2"
                         >
-                          <Trash2 className="h-4 w-4" /> Remover
+                          {deletingId === brand.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          Remover
                         </Button>
                       </div>
                     </td>

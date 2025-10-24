@@ -4,6 +4,8 @@ import { useNavigate } from '@/routes/RouterProvider'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast, type ToastVariant } from '@/components/ui/toast'
+import { InlineError } from '@/components/ui/error-alert'
+import { Loader2 } from 'lucide-react'
 
 type LoginDependencies = {
   signIn: (credentials: { email: string; password: string }) => Promise<boolean>
@@ -95,9 +97,10 @@ export function LoginPage() {
             />
           </div>
 
-          {error && <p className="text-sm text-red-500">{error}</p>}
+          {error && <InlineError message={error} />}
 
-          <Button type="submit" className="w-full" disabled={submitting}>
+          <Button type="submit" className="w-full flex items-center justify-center gap-2" disabled={submitting}>
+            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
             {submitting ? 'Entrando...' : 'Entrar'}
           </Button>
         </form>
