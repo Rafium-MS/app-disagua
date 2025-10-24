@@ -6,6 +6,7 @@ import { Dialog } from '@/components/ui/dialog'
 import { useAuth } from '@/hooks/useAuth'
 import { useToast } from '@/components/ui/toast'
 import { USER_ROLES, type UserRoleName } from '@shared/auth'
+import { ErrorAlert } from '@/components/ui/error-alert'
 
 export function userCanAccessUsersPage(hasRole: (role: UserRoleName) => boolean) {
   return hasRole('ADMIN')
@@ -59,6 +60,7 @@ export function UsersPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<StatusFilter>('ALL')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
   const [formState, setFormState] = useState<FormState>({ open: false, mode: 'create' })
   const [rolesState, setRolesState] = useState<RolesState>({ open: false })
   const [resetState, setResetState] = useState<ResetState>({ open: false })
@@ -66,26 +68,32 @@ export function UsersPage() {
   const loadUsers = useCallback(
     async (page = pagination.page) => {
       setLoading(true)
-      const params = new URLSearchParams()
-      if (search.trim().length > 0) {
-        params.set('q', search.trim())
-      }
-      if (status !== 'ALL') {
-        params.set('status', status)
-      }
-      params.set('page', String(page))
-      params.set('pageSize', String(PAGE_SIZE))
+      setError(null)
+      try {
+        const params = new URLSearchParams()
+        if (search.trim().length > 0) {
+          params.set('q', search.trim())
+        }
+        if (status !== 'ALL') {
+          params.set('status', status)
+        }
+        params.set('page', String(page))
+        params.set('pageSize', String(PAGE_SIZE))
 
-      const response = await authenticatedFetch(`/api/users?${params.toString()}`)
-      if (!response.ok) {
+        const response = await authenticatedFetch(`/api/users?${params.toString()}`)
+        if (!response.ok) {
+          throw new Error('Erro ao carregar usuários')
+        }
+        const data = (await response.json()) as UsersResponse
+        setUsers(data.data)
+        setPagination(data.pagination)
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error('Erro ao carregar usuários')
+        setError(error)
         toast({ title: 'Erro ao carregar usuários', variant: 'error' })
+      } finally {
         setLoading(false)
-        return
       }
-      const data = (await response.json()) as UsersResponse
-      setUsers(data.data)
-      setPagination(data.pagination)
-      setLoading(false)
     },
     [authenticatedFetch, pagination.page, search, status, toast],
   )
@@ -308,6 +316,15 @@ export function UsersPage() {
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Atualizar
           </Button>
         </div>
+
+        {error && (
+          <ErrorAlert
+            title="Erro ao carregar usuários"
+            error={error}
+            onRetry={() => loadUsers(1)}
+            className="mt-4"
+          />
+        )}
 
         <div className="mt-6">
           <DataTable
